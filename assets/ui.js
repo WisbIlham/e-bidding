@@ -169,7 +169,9 @@
     return EB.store.get().inbox.filter(m => m.userId === u && !m.read && m.tenant === EB.tenant.slug()).length;
   }
 
+  // Logo marks removed at the owner's request (2026-11-12): headers show the shop name only.
   function logoMark(t, size) {
+    return '';
     const st = size ? `style="width:${size}px;height:${size}px"` : '';
     return t.logoUrl ? `<img src="${esc(t.logoUrl)}" ${st} class="logo-mark object-cover" alt="">`
       : `<span class="logo-mark" ${st}>${esc(t.logoText)}</span>`;
@@ -266,7 +268,7 @@
     el.innerHTML = `
       <header class="bg-[var(--ink)] text-white">
         <div class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
-          <span class="logo-mark" style="width:34px;height:34px;background:#fff;color:var(--ink)">eB</span>
+          
           <div><div class="font-semibold leading-tight">${esc(window.EB_DATA.platform.name)}</div>
           <div class="text-[12px] text-white/55">Super admin platform</div></div>
           <a href="${ROOT}index.html" class="ml-auto btn btn-sm border border-white/20 text-white hover:bg-white/10">Laman platform</a>

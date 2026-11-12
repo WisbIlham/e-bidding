@@ -48,12 +48,12 @@
         <!-- Branding -->
         <section class="sec">
           <h2 class="sec-h">Jenama kedai</h2>
-          <p class="sec-d">Nama dan logo yang dilihat oleh pembida.</p>
+          <p class="sec-d">Nama kedai yang dilihat oleh pembida.</p>
           <div class="grid sm:grid-cols-2 gap-4 mt-5">
             <div data-field><label class="label" for="s-name">Nama kedai</label><input id="s-name" data-k="name" class="input" maxlength="40"></div>
             <div data-field><label class="label" for="s-tag">Tagline</label><input id="s-tag" data-k="tagline" class="input" maxlength="80"></div>
           </div>
-          <div class="mt-5 flex flex-col sm:flex-row sm:items-start gap-5">
+          <div class="mt-5 hidden" aria-hidden="true"><!-- logo removed at the owner's request; fields kept so the form logic still works -->
             <div class="flex items-center gap-3">
               <div id="logo-box" class="h-16 w-16 rounded-lg grid place-items-center overflow-hidden bg-brand text-white font-medium text-[18px] tracking-[.04em] shrink-0" aria-label="Logo semasa"></div>
               <div class="flex flex-col items-start gap-1">
@@ -67,7 +67,7 @@
           <div class="mt-6 pt-5 border-t border-line">
             <div class="flex items-baseline gap-2"><span class="label !mb-0">Warna jenama</span>
               <button type="button" id="reset-colors" class="btn-link ml-auto min-h-[44px] text-[14px] !text-[var(--ink-2)]">Set semula ke asal</button></div>
-            <p class="hint !mt-1 mb-4">Kedai kekal hitam putih supaya gambar item menonjol. Warna utama dipakai pada tanda logo; aksen pada harga di Mod skrin besar.</p>
+            <p class="hint !mt-1 mb-4">Kedai kekal hitam putih supaya gambar item menonjol. Warna aksen dipakai pada harga di Mod skrin besar.</p>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <label class="flex items-center gap-2 cursor-pointer"><input type="color" data-c="brand" class="swatch" aria-label="Warna utama"><span><span class="block text-[14px] text-ink">Utama</span><span class="block tabular-nums text-[13px] text-muted" data-hex="brand"></span></span></label>
               <label class="flex items-center gap-2 cursor-pointer"><input type="color" data-c="brand2" class="swatch" aria-label="Warna kedua"><span><span class="block text-[14px] text-ink">Kedua</span><span class="block tabular-nums text-[13px] text-muted" data-hex="brand2"></span></span></label>
@@ -291,6 +291,7 @@
     }
 
     function logoHtml(d, size) {
+      return ''; // logo marks removed at the owner's request
       const st = `width:${size}px;height:${size}px`;
       return d.logoUrl ? `<img src="${esc(d.logoUrl)}" class="logo-mark object-cover" style="${st}" alt="">` : `<span class="logo-mark" style="${st};font-size:${Math.round(size * 0.32)}px">${esc(d.logoText || '?')}</span>`;
     }
