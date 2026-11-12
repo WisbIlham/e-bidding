@@ -96,7 +96,7 @@ function migrate(array $s): array {
   $n = seed();
   $lot = &$n['lots'][0];
   foreach (['status', 'startPrice', 'increment', 'bids', 'winner', 'paid', 'openedAt', 'closedAt'] as $k) if (array_key_exists($k, $s)) $lot[$k] = $s[$k];
-  if (isset($s['payment'])) $n['payment'] = $s['payment'];
+  if (isset($s['payment'])) $n['payment'] = $s['payment'] + $n['payment'];   // keep old values, add new keys
   $n['version'] = (int) ($s['version'] ?? 0);
   return $n;
 }
