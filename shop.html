@@ -7,13 +7,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="assets/tw-config.js?v=20261112c"></script>
-  <link rel="stylesheet" href="assets/app.css?v=20261112c">
-  <script src="assets/data.js?v=20261112c"></script>
-  <script src="assets/store.js?v=20261112c"></script>
-  <script src="assets/auction.js?v=20261112c"></script>
-  <script src="assets/ui.js?v=20261112c"></script>
-  <script src="assets/media.js?v=20261112c"></script>
+  <script src="assets/tw-config.js?v=20261112d"></script>
+  <link rel="stylesheet" href="assets/app.css?v=20261112d">
+  <script src="assets/data.js?v=20261112d"></script>
+  <script src="assets/store.js?v=20261112d"></script>
+  <script src="assets/auction.js?v=20261112d"></script>
+  <script src="assets/ui.js?v=20261112d"></script>
+  <script src="assets/media.js?v=20261112d"></script>
   <style>
     /* catalogue grid: one calm dot per lot, the pulse is kept for the item page only */
     .lot-grid .status-live::before { animation: none; }
@@ -510,7 +510,7 @@
           const box = wrap.querySelector('.eb-modal');
           if (box) { box.classList.remove('sm:max-w-md'); box.classList.add('sm:max-w-3xl'); }
           const el = wrap.querySelector('[data-player]');
-          EB.media.mount(el, i.video, { poster: ui.itemImage(i, 0), maxHeight: '70vh',
+          EB.media.mount(el, i.video, { poster: i.video.poster ? ui.ROOT + i.video.poster : ui.itemImage(i, 0), maxHeight: '70vh',
             emptyHtml: '<p class="px-5 py-10 text-center text-[15px] text-white/80">Video tidak dapat dimainkan di peranti ini. Cuba buka halaman lot.</p>' })
             .catch(() => { el.innerHTML = '<p class="px-5 py-10 text-center text-[15px] text-white/80">Video tidak dapat dimuatkan. Semak sambungan internet dan cuba lagi.</p>'; });
         },

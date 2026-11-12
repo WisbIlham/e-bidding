@@ -7,14 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="assets/tw-config.js?v=20261112c"></script>
-  <link rel="stylesheet" href="assets/app.css?v=20261112c">
-  <script src="assets/data.js?v=20261112c"></script>
-  <script src="assets/store.js?v=20261112c"></script>
-  <script src="assets/auction.js?v=20261112c"></script>
-  <script src="assets/ui.js?v=20261112c"></script>
-  <script src="assets/media.js?v=20261112c"></script>
-  <script src="assets/pay.js?v=20261112c"></script>
+  <script src="assets/tw-config.js?v=20261112d"></script>
+  <link rel="stylesheet" href="assets/app.css?v=20261112d">
+  <script src="assets/data.js?v=20261112d"></script>
+  <script src="assets/store.js?v=20261112d"></script>
+  <script src="assets/auction.js?v=20261112d"></script>
+  <script src="assets/ui.js?v=20261112d"></script>
+  <script src="assets/media.js?v=20261112d"></script>
+  <script src="assets/pay.js?v=20261112d"></script>
   <style>
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
@@ -187,7 +187,7 @@
     function renderGallery(item) {
       const total = slideCount(item);
       const vid = videoOf(item);
-      const poster = ui.itemImage(item, 0);
+      const poster = vid && vid.poster ? ui.ROOT + vid.poster : ui.itemImage(item, 0);
       $('gallery').innerHTML = `
         <div class="-mx-4 md:mx-0">
           <div id="gal-stage" class="gal-surface relative aspect-[4/5] max-h-[78vh] w-full overflow-hidden md:rounded-xl">
@@ -228,7 +228,7 @@
       videoMounted = true;
       box.innerHTML = '<p class="px-6 text-center text-[15px] text-white/80">Memuatkan video…</p>';
       const fail = '<p class="px-6 text-center text-[15px] text-white/80">Video tidak dapat dimainkan di peranti ini. Lihat gambar lot di sebelah.</p>';
-      EB.media.mount(box, videoOf(item), { poster: ui.itemImage(item, 0), maxHeight: '78vh', emptyHtml: fail })
+      EB.media.mount(box, videoOf(item), { poster: videoOf(item).poster ? ui.ROOT + videoOf(item).poster : ui.itemImage(item, 0), maxHeight: '78vh', emptyHtml: fail })
         .then(ok => { const wrap = box.firstElementChild; if (ok && wrap) wrap.style.width = '100%'; const v = box.querySelector('video'); if (v) v.play().catch(() => {}); })
         .catch(() => { box.innerHTML = fail; });
     }

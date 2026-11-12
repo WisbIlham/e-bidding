@@ -3,7 +3,7 @@
  * startMin < 0 = already started. endMin < 0 = already ended.
  */
 window.EB_DATA = {
-  version: 10,
+  version: 11,
 
   platform: {
     name: 'eBid Baju',
@@ -80,7 +80,7 @@ window.EB_DATA = {
       startPrice: 10000,
       images: ['assets/img/nikaziz-vest-hanger.jpg', 'assets/img/nikaziz-vest.jpg', 'assets/img/nikaziz-photo.jpg', 'assets/img/pas-poster.jpg'],
       // Optional video: { kind: 'youtube'|'url'|'upload', src, title }. Upload = file kept in IndexedDB (see assets/media.js).
-      video: null,
+      video: { kind: 'url', src: 'assets/video/pas1-baju-tuan-guru.mp4', title: 'Video: baju Tuan Guru Nik Abdul Aziz', poster: 'assets/img/pas1-video-poster.jpg' },
       desc: "Rompi corak celoreng yang pernah dipakai oleh Almarhum Tuan Guru Dato' Bentara Setia Haji Nik Abdul Aziz Nik Mat. Hasil bidaan akan disalurkan kepada dana pilihan raya PAS Kawasan Kota Bharu.",
       // Story section shown on the shop and item pages; editable in admin/items.html
       story: {
