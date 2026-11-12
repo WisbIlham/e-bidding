@@ -461,10 +461,10 @@
       const topId = bids.length ? A.highest(item.id, s).id : null;
       const newest = bids[0] && bids[0].id;
       const live = A.status(item, now) === 'live';
-      const changed = setIfChanged('history', JSON.stringify([bids.map(b => b.id), me, live]), () => `
+      const changed = setIfChanged('history', JSON.stringify([bids.map(b => b.id), me, live, ui.liveStatusHtml()]), () => `
         <div class="flex items-baseline justify-between gap-3">
           <h2 class="font-serif text-[30px] md:text-[36px] leading-tight">Sejarah bidaan <span class="ml-1 font-sans text-[18px] text-[var(--muted)]">${bids.length}</span></h2>
-          ${live ? ui.statusBadge('live') : ''}
+          ${live ? ui.liveStatusHtml() : ''}
         </div>
         <p class="meta mt-2">Lelongan terbuka: semua pembida nampak setiap bidaan. Nama pembida disembunyikan sebahagian.</p>
         ${bids.length ? `<div class="hist mt-5 max-h-[28rem] overflow-y-auto border-b border-line">

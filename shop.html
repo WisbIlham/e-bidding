@@ -94,6 +94,7 @@
           <div id="filters" class="mt-5"></div>
           <div id="results" class="mt-6"></div>
         </section>
+        <section id="livefeed" class="mt-14 md:mt-20 max-w-3xl"></section>
         <section id="story"></section>
         <section id="benef"></section>
         <section id="cara" class="scroll-mt-20 md:scroll-mt-32 mt-16 md:mt-28"></section>
@@ -577,6 +578,7 @@
       renderMyBids(s, items, stats, now);
       renderTabs(items, now);
       renderResults(s, t, items, stats, now);
+      ui.liveFeed($('livefeed'));
       renderStory(items, now);
       renderBenef(t);
       renderHelp(t);

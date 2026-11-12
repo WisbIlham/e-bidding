@@ -3,7 +3,7 @@
  * startMin < 0 = already started. endMin < 0 = already ended.
  */
 window.EB_DATA = {
-  version: 8,
+  version: 9,
 
   platform: {
     name: 'eBid Baju',
@@ -28,6 +28,7 @@ window.EB_DATA = {
       settings: {
         fee: 10, lastWindowMin: 30, lastWindowMultiplier: 2, lastWindowOn: true,
         winLimit: 1, payDeadlineHours: 48,
+        demoBots: true, // simulated bidders keep the demo lively; turn off for a real event
         // How the winner receives the item. Pickup at the event is the default for PAS KB.
         fulfilment: {
           pickup: true,

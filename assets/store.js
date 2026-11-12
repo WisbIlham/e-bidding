@@ -46,7 +46,7 @@
         startAt: now + src.startMin * 60000,
         endAt: now + src.endMin * 60000,
         // bots stop bidding above this, so a real user can still win
-        botCeiling: Math.round(tier.minPrice * (1.8 + Math.random() * 1.6)),
+        botCeiling: Math.round(tier.minPrice * (t.settings.demoBots === false ? 1.8 + Math.random() * 1.6 : 4 + Math.random() * 2)),
         result: null, endingNotified: false, createdAt: now - 3 * 86400000,
       };
       items.push(item);
@@ -92,6 +92,7 @@
     });
 
     return {
+      dataVersion: D.version,
       createdAt: now,
       tenants,
       users: JSON.parse(JSON.stringify(D.users)),
@@ -117,6 +118,7 @@
   }
 
   function get() {
+    if (R.on) return cache;
     // always re-read so other tabs' writes are seen
     const raw = safeGet(KEY);
     if (raw) { try { cache = JSON.parse(raw); } catch (e) { /* keep cache */ } }
@@ -132,6 +134,7 @@
     const s = get();
     const out = fn(s);
     cache = out || s;
+    if (R.on) { R.pending.push(fn); notify('local'); R.push(); return cache; }
     safeSet(KEY, JSON.stringify(cache));
     if (channel) channel.postMessage({ type: 'change', at: Date.now() });
     notify('local');
@@ -144,6 +147,7 @@
   }
 
   function reset() {
+    if (R.on) { R.reset(); notify('reset'); return; }
     safeDel(KEY);
     cache = null;
     load();
@@ -151,13 +155,108 @@
     notify('reset');
   }
 
-  if (channel) channel.onmessage = () => { get(); notify('remote'); };
+  /* ---------- REALTIME MODE (served by server.js) ----------
+   * One shared state for every device on the network. Local edits apply at once and are
+   * pushed with the version they were based on; on a conflict (409) we take the server
+   * state and re-apply our pending edits. Server-Sent Events tell us when someone else wrote. */
+  const me = document.currentScript && document.currentScript.src;
+  const API = (me ? me.replace(/assets\/store\.js.*$/, '') : '/') + 'api/';
+  const R = { on: false, version: 0, pending: [], inflight: false, refetch: false, leaderFlag: false, tab: null, status: 'local' };
+
+  function xhrSync(method, url, body) {
+    try {
+      const x = new XMLHttpRequest();
+      x.open(method, url, false);
+      if (body !== undefined) x.setRequestHeader('Content-Type', 'application/json');
+      x.send(body !== undefined ? JSON.stringify(body) : null);
+      return { status: x.status, json: x.responseText ? JSON.parse(x.responseText) : null };
+    } catch (e) { return { status: 0, json: null }; }
+  }
+  const validState = st => st && st.dataVersion === D.version && Array.isArray(st.items);
+
+  R.push = function () {
+    if (R.inflight || !R.pending.length) return;
+    R.inflight = true;
+    const sent = R.pending.splice(0);
+    fetch(API + 'state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseVersion: R.version, state: cache }) })
+      .then(r => r.json().then(j => ({ status: r.status, j })))
+      .then(({ status, j }) => {
+        R.inflight = false;
+        if (status === 200) { R.version = j.version; R.status = 'live'; }
+        else if (status === 409) {
+          // someone else wrote first: rebase our edits on top of theirs
+          R.version = j.version;
+          cache = validState(j.state) ? j.state : buildInitial();
+          const redo = sent.concat(R.pending.splice(0));
+          redo.forEach(f => { try { const o = f(cache); if (o) cache = o; } catch (e) { console.error(e); } });
+          R.pending = redo;
+          notify('remote');
+        }
+        if (R.pending.length) R.push();
+        else if (R.refetch) { R.refetch = false; R.pull(); }
+      })
+      .catch(() => { R.inflight = false; R.status = 'offline'; R.pending = sent.concat(R.pending); setTimeout(R.push, 1500); });
+  };
+
+  R.pull = function () {
+    if (R.inflight || R.pending.length) { R.refetch = true; return; }
+    fetch(API + 'state', { cache: 'no-store' }).then(r => r.json()).then(j => {
+      if (R.inflight || R.pending.length) { R.refetch = true; return; }
+      if (j.version <= R.version) return;
+      R.version = j.version;
+      if (validState(j.state)) { cache = j.state; notify('remote'); }
+      else { cache = buildInitial(); R.pending.push(() => {}); R.push(); notify('reset'); }
+    }).catch(() => {});
+  };
+
+  R.reset = function () {
+    const r = xhrSync('POST', API + 'reset');
+    if (r.json) R.version = r.json.version;
+    cache = buildInitial();
+    const p = xhrSync('PUT', API + 'state', { baseVersion: R.version, state: cache });
+    if (p.status === 200) R.version = p.json.version;
+  };
+
+  (function connect() {
+    if (!/^https?:/.test(location.protocol)) return;
+    const r = xhrSync('GET', API + 'state');
+    if (r.status !== 200 || !r.json || !('version' in r.json)) return; // plain static server → local mode
+    R.on = true; R.status = 'live'; R.version = r.json.version;
+    if (validState(r.json.state)) cache = r.json.state;
+    else {
+      cache = buildInitial();
+      const p = xhrSync('PUT', API + 'state', { baseVersion: R.version, state: cache });
+      if (p.status === 200) R.version = p.json.version;
+      else if (p.status === 409 && validState(p.json.state)) { R.version = p.json.version; cache = p.json.state; }
+    }
+    try {
+      const es = new EventSource(API + 'events');
+      es.addEventListener('change', e => { try { if (JSON.parse(e.data).version > R.version) R.pull(); } catch (x) { /* ignore */ } });
+      es.addEventListener('reset', () => { R.pull(); });
+      es.onerror = () => { R.status = 'offline'; };
+      es.onopen = () => { R.status = 'live'; R.pull(); };
+    } catch (e) { /* no SSE: still works via pushes */ }
+  })();
+
+  /** Engine leadership across ALL devices (only one runs the bots/closing). */
+  function leader(tabId) {
+    if (!R.on) return null;
+    if (!R.tab) {
+      R.tab = tabId;
+      const ask = () => fetch(API + 'lease', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tab: tabId }) })
+        .then(r => r.json()).then(j => { R.leaderFlag = !!j.leader; }).catch(() => { R.leaderFlag = false; });
+      ask(); setInterval(ask, 2000);
+    }
+    return R.leaderFlag;
+  }
+
+  if (channel) channel.onmessage = () => { if (R.on) return; get(); notify('remote'); };
   window.addEventListener('storage', e => {
-    if (e.key === KEY) { get(); notify('remote'); }
+    if (e.key === KEY && !R.on) { get(); notify('remote'); }
     if (e.key === SESSION_KEY) notify('auth');
   });
 
-  EB.store = { get, update, subscribe, reset, uid, rand, KEY };
+  EB.store = { get, update, subscribe, reset, uid, rand, KEY, leader, isRealtime: () => R.on, status: () => R.status };
 
   /* ---------- users ---------- */
   EB.users = {

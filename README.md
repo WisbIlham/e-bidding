@@ -11,13 +11,20 @@ Demo shop: **PAS Kawasan Kota Bharu**, Bidaan Istimewa at the Majlis Makan Malam
 
 > Demo only. No real payments: the `pay/` pages are a sandbox mock of the Bayarcash payment page. All data lives in the browser's `localStorage`.
 
-## Run
+## Run (realtime: bids appear live on every phone and laptop)
 
 ```bash
-python3 -m http.server 8080
+node server.js
 ```
 
-Then open http://localhost:8080/shop.html. On a phone on the same Wi-Fi, use the computer's LAN IP instead of `localhost`.
+Then open http://localhost:8080/shop.html. The server prints the address for phones on the same Wi-Fi (e.g. `http://192.168.x.x:8080/shop.html`).
+
+- `server.js` needs no packages.
+- It keeps one shared auction state.
+- It pushes every new bid to all devices with Server-Sent Events.
+- It picks one device to run the simulated bidders. Turn these off with `settings.demoBots: false` in `assets/data.js`.
+
+With a plain static server (`python3 -m http.server`, GitHub Pages) the demo still works, but each browser keeps its own data. The page shows "Paparan browser ini sahaja".
 
 ## Pages
 

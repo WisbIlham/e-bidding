@@ -239,6 +239,8 @@
   let lastHuman = {}; // itemId -> time a human took the lead (bots react)
 
   function amLeader() {
+    const remote = S.leader && S.leader(TAB_ID);
+    if (remote !== null && remote !== undefined) return remote; // realtime mode: one engine across all devices
     let cur = null;
     try { cur = JSON.parse(localStorage.getItem(LEADER_KEY) || 'null'); } catch (e) { /* ignore */ }
     const now = Date.now();
@@ -261,7 +263,9 @@
       const humanLead = h && !EB.users.isBot(h.userId);
       if (humanLead && !lastHuman[item.id]) lastHuman[item.id] = now;
       if (!humanLead) delete lastHuman[item.id];
-      let p = left < 60000 ? 0.18 : left < 5 * 60000 ? 0.05 : left < 30 * 60000 ? 0.02 : 0.002;
+      const ts = s.tenants.find(x => x.slug === item.tenant);
+      const lively = !ts || ts.settings.demoBots !== false; // demo: keep the room busy
+      let p = left < 60000 ? 0.18 : left < 5 * 60000 ? 0.06 : left < 30 * 60000 ? 0.04 : (lively ? 0.03 : 0.002);
       if (humanLead && now - lastHuman[item.id] > 4000) p += 0.12; // bots fight back
       if (Math.random() >= p) return;
       const next = minNextBid(item, s);

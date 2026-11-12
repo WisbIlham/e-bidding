@@ -312,6 +312,70 @@
     }
   }
 
+  /* ---------- live bids (visible realtime activity) ---------- */
+  /** Connection pill: realtime across devices (server.js) or this browser only. */
+  function liveStatusHtml() {
+    const rt = EB.store.isRealtime && EB.store.isRealtime();
+    const st = rt ? EB.store.status() : 'local';
+    if (st === 'live') return '<span class="status status-live">Langsung · semua peranti</span>';
+    if (st === 'offline') return '<span class="status status-warn">Menyambung semula…</span>';
+    return '<span class="status status-ended">Paparan browser ini sahaja</span>';
+  }
+
+  const feedSeen = {};
+  /**
+   * liveFeed(el, { itemId?, limit=6, title='Bidaan langsung' }): newest bids for the current shop
+   * (or one item), newest first; new rows flash. Safe to call on every render.
+   */
+  function liveFeed(el, opts) {
+    if (!el) return;
+    opts = opts || {};
+    const s = EB.store.get();
+    const slug = EB.tenant.slug();
+    const me = EB.auth.userId();
+    const bids = s.bids.filter(b => b.tenant === slug && (!opts.itemId || b.itemId === opts.itemId))
+      .sort((a, b) => b.at - a.at).slice(0, opts.limit || 6);
+    const key = el.id || 'feed';
+    const seen = feedSeen[key] || (feedSeen[key] = new Set(bids.map(b => b.id)));
+    const sig = bids.map(b => b.id).join(',') + '|' + liveStatusHtml() + '|' + Math.floor(Date.now() / 30000);
+    if (el.dataset.sig === sig) return;
+    el.dataset.sig = sig;
+    const oneLot = !opts.itemId && s.items.filter(i => i.tenant === slug).length <= 1;
+    const rows = bids.map(b => {
+      const item = s.items.find(i => i.id === b.itemId) || {};
+      const who = b.userId === me ? 'Anda' : maskName(EB.users.byId(b.userId).name);
+      const fresh = !seen.has(b.id);
+      seen.add(b.id);
+      return `<li class="flex items-baseline justify-between gap-4 py-3 ${fresh ? 'flash' : ''}">
+        <div class="min-w-0"><div class="truncate ${b.userId === me ? 'font-medium' : ''}">${esc(who)}</div>
+          ${opts.itemId || oneLot ? '' : `<div class="meta truncate">${esc(item.title || '')}</div>`}</div>
+        <div class="text-right shrink-0"><div class="num text-[18px] whitespace-nowrap">${money(b.amount)}</div><div class="meta whitespace-nowrap">${timeAgo(b.at)}</div></div></li>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 class="font-serif text-[28px] md:text-[36px] leading-tight">${esc(opts.title || 'Bidaan langsung')}</h2>
+        ${liveStatusHtml()}
+      </div>
+      ${bids.length ? `<ul class="mt-4 divide-y divide-[var(--line)] border-y border-[var(--line)]">${rows}</ul>`
+        : `<p class="tile mt-4 p-5 text-[var(--muted)]">Belum ada bidaan. Bidaan baharu akan muncul di sini serta-merta.</p>`}`;
+  }
+
+  /** Toast when someone else bids (shop + item pages), max one every 4s. */
+  let lastBidId = null, lastBidToast = 0;
+  function watchBids(active) {
+    if (active !== 'shop' && active !== 'bids') return;
+    const newest = () => EB.store.get().bids.filter(b => b.tenant === EB.tenant.slug()).sort((a, b) => b.at - a.at)[0];
+    const n0 = newest(); lastBidId = n0 ? n0.id : null;
+    EB.store.subscribe(() => {
+      const n = newest();
+      if (!n || n.id === lastBidId) return;
+      lastBidId = n.id;
+      if (n.userId === EB.auth.userId() || Date.now() - lastBidToast < 4000) return;
+      lastBidToast = Date.now();
+      toast('Bidaan baharu ' + money(n.amount) + ' oleh ' + maskName(EB.users.byId(n.userId).name), 'info');
+    });
+  }
+
   /**
    * EB.init({ area: 'bidder'|'admin'|'super'|'platform', active: 'shop'|'inbox'|... , engine: true })
    * Applies the tenant theme, renders header/footer, starts countdowns + bot engine.
@@ -327,6 +391,7 @@
     tickCountdowns();
     setInterval(tickCountdowns, 1000);
     if (opts.engine !== false) EB.auction.startEngine();
+    if (area === 'bidder') watchBids(opts.active);
     EB.store.subscribe((state, source) => {
       if (area !== 'bidder') return;
       if (source === 'auth') renderHeader(opts.active); else refreshUnread();
@@ -336,6 +401,6 @@
 
   EB.ui = {
     ROOT, link, qs, esc, money, countdown, timeAgo, fmtDate, maskName, itemImage, statusBadge, lotNo, logoMark,
-    toast, modal, tickCountdowns, renderHeader, renderAdminHeader, renderSuperHeader, renderFooter,
+    toast, modal, tickCountdowns, liveFeed, liveStatusHtml, renderHeader, renderAdminHeader, renderSuperHeader, renderFooter,
   };
 })();
