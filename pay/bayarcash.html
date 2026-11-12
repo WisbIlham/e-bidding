@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Bayarcash Payment (Sandbox)</title>
+  <link rel="stylesheet" href="bayarcash.css">
+  <script src="../assets/data.js"></script>
+  <script src="../assets/store.js"></script>
+  <script src="../assets/auction.js"></script>
+  <script src="../assets/ui.js"></script>
+  <script src="../assets/pay.js"></script>
+</head>
+<body>
+  <div class="sbx" role="note">SANDBOX / DEMO MODE: tiada wang sebenar</div>
+  <main class="wrap" id="app"></main>
+  <div class="ovl" id="ovl" hidden role="status" aria-live="polite"><div><div class="spin"></div><b id="ovl-t">Redirecting…</b><span id="ovl-s"></span></div></div>
+
+  <script>
+  (function () {
+    const P = EB.pay;
+    const esc = EB.ui.esc;
+    const app = document.getElementById('app');
+    const id = new URLSearchParams(location.search).get('intent');
+    const it = P.get(id);
+
+    const SANDBOX = ['SBI Bank A', 'SBI Bank B', 'SBI Bank C'];
+    const BANKS = ['Affin Bank', 'Alliance Bank', 'AmBank', 'Bank Islam', 'Bank Muamalat', 'Bank Rakyat', 'BSN', 'CIMB Clicks',
+      'Hong Leong Connect', 'HSBC', 'Kuwait Finance House', 'Maybank2u', 'OCBC', 'Public Bank', 'RHB Now', 'Standard Chartered', 'UOB', 'Agrobank'];
+
+    const FPX_MARK = `<span class="fpx" aria-label="FPX Online Banking Payments" role="img">
+      <span class="fpx-top"><svg width="20" height="22" viewBox="0 0 20 22" aria-hidden="true"><path d="M9 1L1 11l8 10V15L5.5 11 9 7z" fill="#1b75bb"/><path d="M11 1l8 10-8 10V15l3.5-4L11 7z" fill="#1b3a6b"/></svg>FPX</span>
+      <span class="fpx-sub">Online Banking Payments</span></span>`;
+    const DN_MARK = '<span class="mark" role="img" aria-label="DuitNow QR"><span class="mark-dn">DuitNow</span></span>';
+    const CARD_MARK = '<span class="mark" role="img" aria-label="Visa and Mastercard accepted"><span class="mark-card">VISA</span><span class="mark-card mc">Mastercard</span></span>';
+    const ARROW = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M3 10h13M11 4.5l5.5 5.5-5.5 5.5"/></svg>';
+    const CHEV = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2.5 5l4.5 4.5L11.5 5"/></svg>';
+    const LOCK = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="5.5" width="8" height="5.5" rx="1"/><path d="M4 5.5V4a2 2 0 014 0v1.5"/></svg>';
+
+    function overlay(t, s) {
+      document.getElementById('ovl-t').textContent = t;
+      document.getElementById('ovl-s').textContent = s || '';
+      document.getElementById('ovl').hidden = false;
+    }
+
+    if (!it) {
+      document.title = 'Invalid payment · Bayarcash (Sandbox)';
+      app.innerHTML = `<div class="card"><div class="card-h"><h1>Payment link not found</h1></div>
+        <div class="card-b"><p style="margin:0">This payment link is invalid or has expired. Please return to the merchant and try again.</p></div>
+        <div class="card-f"><p>Secured by Bayarcash (Sandbox)</p>${FPX_MARK}</div></div>`;
+      return;
+    }
+    if (it.status !== 'pending') { location.replace(P.pageUrl('status.html', it)); return; }
+
+    const m = it.merchant || {};
+    const c = it.customer || {};
+    const amt = P.myr(it.amount);
+    const kv = rows => `<dl class="kv">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v || '-')}</dd></div>`).join('')}</dl>`;
+    const titles = { fpx: 'Proceed with FPX Online Banking', duitnow: 'Proceed with DuitNow QR', card: 'Proceed with Card Payment' };
+
+    document.title = titles[it.channel] + ' · Bayarcash (Sandbox)';
+
+    /* ---------- right column per channel ---------- */
+    function fpxPane() {
+      return `<h2 class="sec">FPX Online Banking</h2>
+        <div class="alert-y">
+          <p><b>Username:</b> 1234<span class="gap"></span><b>Password:</b> 1234</p>
+          <hr>
+          <p><b>SBI Bank A:</b> For successful transaction<br><b>SBI Bank B:</b> For failed transaction<br><b>SBI Bank C:</b> For random status</p>
+        </div>
+        <div class="alert-b">
+          <label for="bank" class="sr">Select Bank</label>
+          <select id="bank" class="select" aria-describedby="bank-err">
+            <option value="">Select Bank</option>
+            <optgroup label="Sandbox banks">${SANDBOX.map(b => `<option>${b}</option>`).join('')}</optgroup>
+            <optgroup label="Banks (demo: always successful)">${BANKS.map(b => `<option>${b}</option>`).join('')}</optgroup>
+          </select>
+          <p class="err" id="bank-err" hidden>Please select your bank to proceed.</p>
+        </div>
+        <button type="button" class="btn-go" id="go" aria-disabled="true">Proceed Payment ${ARROW}</button>`;
+    }
+
+    function duitnowPane() {
+      return `<h2 class="sec">DuitNow QR</h2>
+        <div class="qr-wrap">
+          <span class="dn-label">DuitNow QR</span><br>
+          <div class="qr-box" id="qr-box"><div id="qr"></div><span class="qr-stamp">DEMO · NOT A REAL QR</span></div>
+          <p class="qr-help">Scan with any banking app or e-wallet</p>
+          <p class="qr-timer" id="qr-timer" aria-live="polite">QR expires in <b id="qr-left">5:00</b></p>
+          <button type="button" class="btn-go" id="go">Simulate payment (demo)</button>
+        </div>`;
+    }
+
+    function cardPane() {
+      return `<h2 class="sec">Credit / Debit Card</h2>
+        <div class="alert-y"><p><b>Sandbox:</b> Use test card 4111 1111 1111 1111, any future expiry date and any 3-digit CVV.</p>
+          <hr><p>Nothing you type here is saved or sent anywhere.</p></div>
+        <form id="cardf" novalidate autocomplete="off">
+          <div class="field"><label for="cno">Card number</label>
+            <input class="input" id="cno" inputmode="numeric" autocomplete="off" placeholder="1234 5678 9012 3456" maxlength="23" aria-describedby="cno-err">
+            <p class="err" id="cno-err" hidden></p></div>
+          <div class="row2">
+            <div class="field"><label for="cexp">Expiry (MM/YY)</label>
+              <input class="input" id="cexp" inputmode="numeric" autocomplete="off" placeholder="MM/YY" maxlength="5" aria-describedby="cexp-err">
+              <p class="err" id="cexp-err" hidden></p></div>
+            <div class="field"><label for="ccvv">CVV</label>
+              <input class="input" id="ccvv" type="password" inputmode="numeric" autocomplete="off" placeholder="123" maxlength="4" aria-describedby="ccvv-err">
+              <p class="err" id="ccvv-err" hidden></p></div>
+          </div>
+          <div class="field"><label for="cname">Name on card</label>
+            <input class="input" id="cname" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="cname-err">
+            <p class="err" id="cname-err" hidden></p></div>
+          <button type="submit" class="btn-go" id="go">Proceed Payment ${ARROW}</button>
+        </form>`;
+    }
+
+    const pane = it.channel === 'duitnow' ? duitnowPane() : it.channel === 'card' ? cardPane() : fpxPane();
+
+    app.innerHTML = `
+      <div class="card">
+        <div class="card-h"><h1>${titles[it.channel]}</h1></div>
+        <div class="card-b">
+          <div class="cols">
+            <section class="col-l collapsible" id="col-l" aria-label="Payment details">
+              <button type="button" class="td-toggle" id="td-toggle" aria-expanded="false" aria-controls="td-body">
+                <span class="tt-txt"><span class="tt-l">Transaction details</span><span class="tt-m">${esc(m.name)}</span></span>
+                <span class="tt-amt">${esc(amt)}</span>${CHEV}
+              </button>
+              <div class="td-body" id="td-body">
+                <h2 class="sec">Merchant Details</h2>
+                ${kv([['Merchant', m.name], ['Registration', m.registration], ['Email', m.email], ['Contact Number', m.phone]])}
+                <h2 class="sec">Transaction Details</h2>
+                ${kv([['ID Number', it.orderNo], ['Amount', amt], ['Customer', c.name], ['Email', c.email], ['Mobile Number', c.phone]])}
+              </div>
+            </section>
+            <section class="col-r" aria-label="Payment method">${pane}</section>
+          </div>
+        </div>
+        <div class="card-f">
+          <div><p>By clicking on the proceed button, you hereby agree with <a href="#terms" id="terms">Terms &amp; Policies</a>.</p>
+            <p class="terms-note" id="terms-note" hidden>Sandbox demo: no real Terms &amp; Policies apply and no money is charged.</p></div>
+          ${it.channel === 'duitnow' ? DN_MARK : it.channel === 'card' ? CARD_MARK : FPX_MARK}
+        </div>
+      </div>
+      <div class="below">
+        <a href="#" class="cancel" id="cancel">Cancel and return to merchant</a>
+        <span class="secured">${LOCK} Secured by Bayarcash (Sandbox)</span>
+      </div>`;
+
+    /* ---------- shared bits ---------- */
+    const col = document.getElementById('col-l');
+    const tog = document.getElementById('td-toggle');
+    tog.onclick = () => { const open = col.classList.toggle('open'); tog.setAttribute('aria-expanded', String(open)); };
+    document.getElementById('terms').onclick = e => { e.preventDefault(); const n = document.getElementById('terms-note'); n.hidden = !n.hidden; };
+    document.getElementById('cancel').onclick = e => {
+      e.preventDefault();
+      const href = P.cancel(it.id);
+      overlay('Returning to merchant…', m.name);
+      location.replace(href);
+    };
+
+    // A second tab may finish this intent; follow it.
+    window.addEventListener('storage', e => {
+      if (e.key !== 'ebid_pay_intents') return;
+      const now = P.get(it.id);
+      if (now && now.status !== 'pending') location.replace(P.pageUrl('status.html', now));
+    });
+
+    const go = document.getElementById('go');
+
+    /* ---------- FPX ---------- */
+    if (it.channel === 'fpx') {
+      const sel = document.getElementById('bank');
+      const err = document.getElementById('bank-err');
+      sel.onchange = () => {
+        const ok = !!sel.value;
+        go.setAttribute('aria-disabled', String(!ok));
+        if (ok) { err.hidden = true; sel.removeAttribute('aria-invalid'); }
+      };
+      go.onclick = () => {
+        if (!sel.value) { err.hidden = false; sel.setAttribute('aria-invalid', 'true'); sel.focus(); return; }
+        go.disabled = true;
+        overlay('Redirecting to ' + sel.value + '…', 'Please do not close or refresh this page.');
+        setTimeout(() => location.href = P.pageUrl('bank.html', it, { bank: sel.value }), 700);
+      };
+    }
+
+    /* ---------- DuitNow QR (fake pattern) ---------- */
+    if (it.channel === 'duitnow') {
+      let seed = 0;
+      const mk = salt => {
+        let h = 2166136261;
+        const str = it.id + ':' + salt;
+        for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+        return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 1000) / 1000; };
+      };
+      function drawQR() {
+        const N = 29, rnd = mk(seed++);
+        const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#111"/><rect x="${x + 1}" y="${y + 1}" width="5" height="5" fill="#fff"/><rect x="${x + 2}" y="${y + 2}" width="3" height="3" fill="#111"/>`;
+        const inF = (x, y) => (x < 8 && y < 8) || (x > N - 9 && y < 8) || (x < 8 && y > N - 9);
+        let cells = '';
+        for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+          if (inF(x, y)) continue;
+          if (rnd() < 0.47) cells += `M${x} ${y}h1v1h-1z`;
+        }
+        document.getElementById('qr').innerHTML = `<svg viewBox="-1 -1 ${N + 2} ${N + 2}" shape-rendering="crispEdges" role="img" aria-label="Sample DuitNow QR pattern (demo, not scannable)">
+          <rect x="-1" y="-1" width="${N + 2}" height="${N + 2}" fill="#fff"/><path d="${cells}" fill="#111"/>${finder(0, 0)}${finder(N - 7, 0)}${finder(0, N - 7)}</svg>`;
+      }
+      let end = 0, timer = null;
+      const box = document.getElementById('qr-box');
+      const tEl = document.getElementById('qr-timer');
+      function startTimer() {
+        drawQR();
+        box.classList.remove('expired');
+        end = Date.now() + 5 * 60000;
+        tEl.innerHTML = 'QR expires in <b id="qr-left">5:00</b>';
+        go.textContent = 'Simulate payment (demo)';
+        go.dataset.mode = 'pay';
+        clearInterval(timer);
+        timer = setInterval(tick, 1000);
+      }
+      function tick() {
+        const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+        const el = document.getElementById('qr-left');
+        if (el) el.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+        if (!left) {
+          clearInterval(timer);
+          box.classList.add('expired');
+          tEl.textContent = 'QR code has expired.';
+          go.textContent = 'Generate new QR';
+          go.dataset.mode = 'refresh';
+        }
+      }
+      go.onclick = () => {
+        if (go.dataset.mode === 'refresh') { startTimer(); return; }
+        clearInterval(timer);
+        go.disabled = true;
+        overlay('Waiting for DuitNow confirmation…', 'Sandbox: simulating a successful scan.');
+        P.authorize(it.id, { status: 'success', bank: 'DuitNow QR' });
+        setTimeout(() => location.href = P.pageUrl('status.html', it), 900);
+      };
+      startTimer();
+    }
+
+    /* ---------- Card (format checks only; nothing is stored or sent) ---------- */
+    if (it.channel === 'card') {
+      const f = document.getElementById('cardf');
+      const $ = s => document.getElementById(s);
+      const digitsOnly = v => v.replace(/\D/g, '');
+      $('cno').addEventListener('input', e => { const d = digitsOnly(e.target.value).slice(0, 19); e.target.value = d.replace(/(.{4})/g, '$1 ').trim(); });
+      $('cexp').addEventListener('input', e => {
+        let d = digitsOnly(e.target.value).slice(0, 4);
+        if (d.length >= 3) d = d.slice(0, 2) + '/' + d.slice(2);
+        e.target.value = d;
+      });
+      $('ccvv').addEventListener('input', e => { e.target.value = digitsOnly(e.target.value).slice(0, 4); });
+      const luhn = n => { let sum = 0, alt = false; for (let i = n.length - 1; i >= 0; i--) { let d = +n[i]; if (alt) { d *= 2; if (d > 9) d -= 9; } sum += d; alt = !alt; } return sum % 10 === 0; };
+      function setErr(field, msg) {
+        const e = $(field + '-err');
+        e.textContent = msg || ''; e.hidden = !msg;
+        if (msg) $(field).setAttribute('aria-invalid', 'true'); else $(field).removeAttribute('aria-invalid');
+        return !msg;
+      }
+      f.onsubmit = e => {
+        e.preventDefault();
+        const no = digitsOnly($('cno').value);
+        const exp = $('cexp').value.trim();
+        const cvv = $('ccvv').value.trim();
+        const name = $('cname').value.trim();
+        let ok = true;
+        ok = setErr('cno', !no ? 'Enter your card number.' : (no.length < 13 || no.length > 19 || !luhn(no)) ? 'Card number is not valid.' : '') && ok;
+        let expMsg = '';
+        const mm = exp.match(/^(\d{2})\/(\d{2})$/);
+        if (!mm) expMsg = 'Use the format MM/YY.';
+        else {
+          const mo = +mm[1], yr = 2000 + +mm[2], d = new Date();
+          if (mo < 1 || mo > 12) expMsg = 'Month must be 01 to 12.';
+          else if (yr < d.getFullYear() || (yr === d.getFullYear() && mo < d.getMonth() + 1)) expMsg = 'This card has expired.';
+        }
+        ok = setErr('cexp', expMsg) && ok;
+        ok = setErr('ccvv', /^\d{3,4}$/.test(cvv) ? '' : 'CVV is 3 or 4 digits.') && ok;
+        ok = setErr('cname', name.length >= 2 ? '' : 'Enter the name on the card.') && ok;
+        if (!ok) { const bad = f.querySelector('[aria-invalid="true"]'); if (bad) bad.focus(); return; }
+        // sandbox outcome: only the published test card succeeds; then wipe what was typed
+        const approved = no === '4111111111111111';
+        ['cno', 'cexp', 'ccvv', 'cname'].forEach(k => { $(k).value = ''; });
+        go.disabled = true;
+        overlay('Verifying card (3D Secure)…', 'Sandbox: no card is charged.');
+        P.authorize(it.id, { status: approved ? 'success' : 'failed', bank: 'Debit / Credit Card' });
+        setTimeout(() => location.href = P.pageUrl('status.html', it), 1000);
+      };
+    }
+  })();
+  </script>
+</body>
+</html>

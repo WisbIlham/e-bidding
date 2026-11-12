@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pemenang & bayaran · eBid Baju</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="../assets/tw-config.js"></script>
+  <link rel="stylesheet" href="../assets/app.css">
+  <script src="../assets/data.js"></script>
+  <script src="../assets/store.js"></script>
+  <script src="../assets/auction.js"></script>
+  <script src="../assets/ui.js"></script>
+  <style>
+    .search { position: relative; }
+    .search svg { position: absolute; left: .7rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    .t-open th:first-child, .t-open td:first-child { padding-left: 0; }
+    .t-open th:last-child, .t-open td:last-child { padding-right: 0; }
+    tr.is-overdue td:first-child { box-shadow: inset 2px 0 0 var(--live); padding-left: .75rem; }
+    li.is-overdue { box-shadow: inset 2px 0 0 var(--live); padding-left: 14px; }
+    .kpi-v { font-variant-numeric: tabular-nums; font-weight: 400; letter-spacing: -.02em; line-height: 1; white-space: nowrap;
+      font-size: clamp(24px, 6.4vw, 34px); color: var(--ink); }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div id="eb-header"></div>
+  <main class="max-w-6xl mx-auto px-4 md:px-6 pt-10 pb-8 sm:pt-14" id="app">
+    <div class="mb-8 sm:mb-10">
+      <h1 class="font-serif text-[36px] sm:text-[40px] font-normal leading-[1.1] tracking-[-0.01em] text-ink">Pemenang & bayaran</h1>
+      <p class="mt-2 text-[16px] text-muted">Invois pemenang, status bayaran, penyerahan item dan tawaran kepada pembida kedua.</p>
+    </div>
+
+    <section id="summary" aria-label="Ringkasan" class="tile grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-7 sm:gap-x-10 px-5 py-6 sm:px-8 sm:py-8 mb-14 sm:mb-16"></section>
+
+    <section id="rule" aria-label="Peraturan bayaran" class="mb-14 sm:mb-16"></section>
+
+    <div class="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 mb-2 md:border-b md:border-line">
+      <div id="pills" role="tablist" aria-label="Status invois" class="tabs flex-1 min-w-0 md:border-b-0"></div>
+      <div class="md:w-64 md:pb-2"><div class="search">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+        <label class="sr-only" for="q">Cari invois</label>
+        <input id="q" type="search" class="input !min-h-[44px] !py-1 !pl-9 text-[16px]" placeholder="Cari invois, item, nama">
+      </div></div>
+    </div>
+
+    <div id="tbl"></div>
+  </main>
+  <div id="eb-footer"></div>
+
+  <script>
+    EB.init({ area: 'admin', active: 'winners', title: 'Pemenang & bayaran' });
+    const { esc, money, link, fmtDate, itemImage, statusBadge, toast, modal, countdown, timeAgo } = EB.ui;
+    const A = EB.auction;
+    const slug = EB.tenant.slug();
+    const filt = { status: 'all', q: '' };
+    const fmtShort = ts => new Date(ts).toLocaleString('ms-MY', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+
+    function nextBidder(s, o) {
+      const excluded = s.orders.filter(x => x.itemId === o.itemId).map(x => x.userId);
+      return A.bidsFor(o.itemId, s).find(b => !excluded.includes(b.userId)) || null;
+    }
+
+    /* ---------- fulfilment: "Ambil di majlis" vs "Pos" ----------
+     * order.meta.fulfilment if checkout stored it; otherwise read the address string
+     * (checkout writes "Ambil semasa majlis: ..." for pickup). */
+    function fulfilmentConf(t) {
+      return Object.assign({ pickup: false, pickupLabel: 'Ambil semasa majlis', pickupNote: '', post: true, default: 'post' }, t.settings.fulfilment || {});
+    }
+    function fulfilmentOf(o, t) {
+      const m = o.meta && (o.meta.fulfilment || o.meta.delivery);
+      if (m === 'pickup' || m === 'post') return m;
+      const a = String(o.address || '').trim();
+      if (!a) return null;
+      const label = (fulfilmentConf(t).pickupLabel || '').trim().toLowerCase();
+      const low = a.toLowerCase();
+      if (low.startsWith('ambil semasa majlis') || low.startsWith('ambil di majlis') || low === 'ambil sendiri' || (label && low.startsWith(label + ':'))) return 'pickup';
+      return 'post';
+    }
+    /** The address without the "Ambil semasa majlis:" prefix (pickup orders). */
+    function pickupDetail(o, t) {
+      const a = String(o.address || '').trim();
+      const i = a.indexOf(':');
+      return i > -1 ? a.slice(i + 1).trim() : (a.toLowerCase() === 'ambil sendiri' ? '' : a);
+    }
+
+    function cell(label, value, sub) {
+      return `<div class="min-w-0">
+        <div class="eyebrow">${label}</div>
+        <div class="kpi-v mt-2">${value}</div>
+        <div class="mt-2 text-[13px] leading-snug text-muted">${sub}</div></div>`;
+    }
+
+    function rows(s) {
+      const items = s.items.filter(i => i.tenant === slug);
+      const out = s.orders.filter(o => o.tenant === slug).map(o => ({ kind: 'order', o, item: items.find(i => i.id === o.itemId) || { title: '(item dipadam)', color: '#e2e4df' }, at: o.createdAt }));
+      items.filter(i => i.result && !s.bids.some(b => b.itemId === i.id)).forEach(i => out.push({ kind: 'nobid', item: i, at: i.result.closedAt || i.endAt }));
+      return out.sort((a, b) => b.at - a.at);
+    }
+
+    function render() {
+      const s = EB.store.get();
+      const t = s.tenants.find(x => x.slug === slug);
+      const now = Date.now();
+      const all = rows(s);
+      const orders = all.filter(r => r.kind === 'order').map(r => r.o);
+      const paid = orders.filter(o => o.status === 'paid');
+      const unpaid = orders.filter(o => o.status === 'unpaid');
+      const overdue = unpaid.filter(o => o.dueAt < now);
+      const passed = orders.filter(o => o.status === 'passed');
+      const nobid = all.filter(r => r.kind === 'nobid');
+      const toHand = paid.filter(o => fulfilmentOf(o, t) === 'pickup' && !o.handedOver);
+
+      document.getElementById('summary').innerHTML = [
+        cell('Jualan dibayar', money(paid.reduce((a, o) => a + o.amount, 0)), paid.length + ' invois dibayar' + (toHand.length ? ` · <span class="text-[var(--warn)]">${toHand.length} belum diserahkan</span>` : '')),
+        cell('Belum bayar', money(unpaid.reduce((a, o) => a + o.amount, 0)), unpaid.length + ' invois' + (overdue.length ? ` · <span class="text-[var(--live)]">${overdue.length} lewat tempoh</span>` : '')),
+        cell('Dipindah', passed.length, 'invois dipindah ke pembida seterusnya'),
+        cell('Tiada bidaan', nobid.length, 'item tamat tanpa sebarang bidaan'),
+      ].join('');
+
+      const ruleKey = t.settings.payDeadlineHours;
+      const ruleEl = document.getElementById('rule');
+      if (ruleEl.dataset.k !== String(ruleKey)) {
+        ruleEl.dataset.k = ruleKey;
+        const h = t.settings.payDeadlineHours;
+        const step = (n, title, text) => `<li class="pt-4 sm:pr-6"><div class="flex items-baseline gap-3"><span class="tabular-nums text-[14px] text-muted">${n}</span><span class="text-[16px] text-ink">${title}</span></div>
+          <p class="text-[14px] text-ink-2 mt-1 leading-snug">${text}</p></li>`;
+        ruleEl.innerHTML = `<div class="flex flex-col sm:flex-row sm:items-baseline gap-x-3 gap-y-1"><h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Peraturan bayaran</h2><span class="text-[14px] text-muted">Pemenang mesti bayar dalam <span class="tabular-nums text-ink">${h} jam</span> selepas lelongan tamat.</span></div>
+          <ol class="grid sm:grid-cols-3 gap-x-6 gap-y-2 border-t border-ink mt-4">
+            ${step('01', 'Invois dihantar', 'Pembida tertinggi menerima invois sebaik lelongan tamat.')}
+            ${step('02', `Tempoh ${h} jam`, 'Bayar dalam talian (FPX), atau admin tandakan dibayar secara manual.')}
+            ${step('03', 'Tidak bayar', 'Admin boleh pindah item kepada pembida kedua tertinggi pada harga bidaannya.')}
+          </ol>`;
+      }
+
+      const counts = { all: all.length, unpaid: unpaid.length, paid: paid.length, passed: passed.length, nobid: nobid.length };
+      document.getElementById('pills').innerHTML = [['all', 'Semua'], ['unpaid', 'Belum bayar'], ['paid', 'Dibayar'], ['passed', 'Dipindah'], ['nobid', 'Tiada bidaan']]
+        .map(([k, l]) => `<button type="button" role="tab" class="tab" aria-selected="${filt.status === k}" data-st="${k}">${l}<span class="count">${counts[k]}</span></button>`).join('');
+
+      const q = filt.q.trim().toLowerCase();
+      const list = all.filter(r => {
+        if (filt.status === 'nobid' && r.kind !== 'nobid') return false;
+        if (filt.status !== 'all' && filt.status !== 'nobid' && (r.kind !== 'order' || r.o.status !== filt.status)) return false;
+        if (!q) return true;
+        const name = r.kind === 'order' ? EB.users.byId(r.o.userId).name + ' ' + r.o.id : '';
+        return (r.item.title + ' ' + name).toLowerCase().includes(q);
+      });
+
+      const box = document.getElementById('tbl');
+      if (!list.length) {
+        box.innerHTML = (q || filt.status !== 'all')
+          ? `<div class="py-14 border-t border-line"><p class="text-[16px] text-ink-2">Tiada invois sepadan dengan penapis ini.</p>
+              <button type="button" data-clear class="btn btn-outline mt-4">Tunjuk semua invois</button></div>`
+          : `<div class="py-14 border-t border-line"><p class="text-[16px] text-ink-2">Belum ada invois. Invois dihasilkan sebaik sesuatu lelongan tamat.</p>
+              <a class="link-arrow mt-4" href="${link('admin/items.html')}">Lihat item lelongan</a></div>`;
+        return;
+      }
+      // table on wide screens; a stacked list on phones/tablets so the actions stay one tap away
+      const parts = list.map(r => r.kind === 'nobid' ? noBidRow(r) : orderRow(r, s, now, t));
+      box.innerHTML = `<div class="hidden lg:block"><table class="table t-open">
+        <thead><tr>
+          <th>Invois</th><th>Item</th><th>Pemenang & penerimaan</th><th class="num">Amaun</th>
+          <th>Status</th><th class="num">Tindakan</th></tr></thead>
+        <tbody>${parts.map(p => p.row).join('')}</tbody></table></div>
+        <ul class="lg:hidden border-t border-line divide-line">${parts.map(p => p.card).join('')}</ul>`;
+    }
+
+    function itemCell(item) {
+      return `<div class="flex items-center gap-3 min-w-0"><img src="${esc(itemImage(item))}" class="h-14 w-11 rounded object-cover bg-tile shrink-0" alt="">
+        <div class="min-w-0">${item.id ? `<div class="lot">${esc(EB.ui.lotNo(item))}</div>` : ''}<div class="font-serif text-[16px] leading-snug text-ink truncate max-w-[170px]" title="${esc(item.title)}">${esc(item.title)}</div>
+        ${item.closedEarlyBy ? '<div class="text-[13px] text-muted">Ditutup awal oleh admin</div>' : ''}</div></div>`;
+    }
+
+    function noBidRow(r) {
+      const closed = `<span class="status status-ended">Tiada bidaan</span><div class="text-[13px] text-muted mt-0.5 whitespace-nowrap">Ditutup ${esc(timeAgo(r.at))}</div>`;
+      const again = cls => `<a class="btn btn-outline ${cls}" href="${link('admin/items.html', { edit: r.item.id })}">Lelong semula</a>`;
+      return {
+        row: `<tr>
+        <td class="text-muted">Tiada invois</td>
+        <td>${itemCell(r.item)}</td>
+        <td class="text-muted">Tiada pemenang</td>
+        <td class="text-right text-muted">Tiada</td>
+        <td>${closed}</td>
+        <td class="text-right">${again('btn-sm')}</td></tr>`,
+        card: `<li class="py-5">${cardHead(r.item, '')}
+          <div class="mt-3">${closed}</div>
+          <div class="mt-4">${again('w-full')}</div></li>`,
+      };
+    }
+
+    /** phone card head: photo, lot, title (+ amount on the right) */
+    function cardHead(item, amount, struck) {
+      return `<div class="flex gap-4 min-w-0"><img src="${esc(itemImage(item))}" class="h-[76px] w-[60px] rounded object-cover bg-tile shrink-0" alt="">
+        <div class="min-w-0 flex-1">${item.id ? `<div class="lot">${esc(EB.ui.lotNo(item))}</div>` : ''}
+          <div class="font-serif text-[18px] leading-snug text-ink line-clamp-2">${esc(item.title)}</div>
+          ${amount ? `<div class="tabular-nums text-[20px] leading-tight mt-1 ${struck ? 'text-muted line-through' : 'text-ink'}">${amount}</div>` : ''}</div></div>`;
+    }
+
+    function orderRow(r, s, now, t) {
+      const o = r.o;
+      const u = EB.users.byId(o.userId);
+      const bot = EB.users.isBot(o.userId);
+      const late = o.status === 'unpaid' && o.dueAt < now;
+      let timing = '';
+      if (o.status === 'unpaid') {
+        timing = !late
+          ? `<div class="text-[13px] text-muted mt-1">Baki masa bayar</div><span class="tabular-nums text-[14px] text-[var(--warn)]" data-countdown-end="${o.dueAt}">${countdown(o.dueAt - now)}</span>`
+          : `<div class="text-[13px] text-[var(--live)] mt-1">Lewat tempoh</div><div class="tabular-nums text-[13px] text-muted">sejak ${esc(fmtShort(o.dueAt))}</div>`;
+      } else if (o.status === 'paid') {
+        timing = `<div class="tabular-nums text-[13px] text-ink-2 mt-1">${esc(fmtShort(o.paidAt))}</div><div class="text-[13px] text-muted">${esc(o.method || 'FPX')}${o.ref ? '<br><span class="tabular-nums">' + esc(o.ref) + '</span>' : ''}</div>`;
+      } else {
+        timing = `<div class="text-[13px] text-muted mt-1">Tidak dibayar dalam tempoh</div>`;
+      }
+      const ff = o.status === 'paid' ? fulfilmentOf(o, t) : null;
+      const actionsFor = wide => {
+        const sz = wide ? 'w-full' : 'btn-sm';
+        if (o.status === 'unpaid') {
+          return `<div class="${wide ? 'grid gap-2' : 'flex flex-col items-end gap-1.5'}"><button type="button" class="btn btn-brand ${sz}" data-act="paid" data-id="${esc(o.id)}">Tandakan dibayar</button>
+           <button type="button" class="btn ${sz} ${late ? 'btn-danger' : 'btn-outline'}" data-act="pass" data-id="${esc(o.id)}">Pindah ke pembida kedua</button></div>`;
+        }
+        if (ff === 'pickup' && !o.handedOver) return `<button type="button" class="btn ${wide ? 'btn-brand w-full' : 'btn-outline btn-sm'}" data-act="hand" data-id="${esc(o.id)}">Tandakan sudah diserahkan</button>`;
+        if (ff === 'pickup') {
+          return `<div class="flex ${wide ? 'items-center justify-between' : 'flex-col items-end'} gap-1"><span class="text-[14px] text-muted">Selesai</span>
+           <button type="button" class="btn-link !text-[var(--ink-2)] text-[14px] ${wide ? 'min-h-[44px]' : ''}" data-act="unhand" data-id="${esc(o.id)}">Batalkan penyerahan</button></div>`;
+        }
+        return wide ? '' : `<span class="text-[14px] text-muted">${o.status === 'paid' ? 'Selesai' : 'Ditutup'}</span>`;
+      };
+      // keep phone numbers on one line (escaped text in, HTML out)
+      const nw = h => h.replace(/\d[\d -]*\d/g, m => `<span class="whitespace-nowrap">${m}</span>`);
+      let recv;
+      if (ff === 'pickup') {
+        const det = pickupDetail(o, t);
+        recv = `<div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5"><span class="text-[14px] text-ink-2">Ambil di majlis</span>
+            ${o.handedOver ? `<span class="status status-ok">Sudah diserahkan</span>` : `<span class="status status-warn">Belum diserahkan</span>`}</div>
+          ${o.handedOver ? `<div class="tabular-nums text-[13px] text-muted">${esc(fmtShort(o.handedOver))}</div>` : ''}
+          ${det ? `<div class="text-[13px] text-ink-2 line-clamp-2" title="${esc(det)}">${nw(esc(det))}</div>` : ''}`;
+      } else if (ff === 'post') {
+        recv = `<div class="mt-1.5 text-[14px] text-ink-2">Pos</div>
+          <div class="text-[13px] text-ink-2 line-clamp-2" title="${esc(o.address)}">${esc(o.address)}</div>`;
+      } else {
+        recv = `<div class="text-[13px] mt-1 ${o.address ? 'text-ink-2' : 'text-muted'} line-clamp-2" title="${esc(o.address || '')}">${o.address ? esc(o.address) : 'Cara terima belum dipilih'}</div>`;
+      }
+      const contact = `<div class="text-[13px] text-muted break-words">${bot ? 'Pembida berdaftar' : nw(esc([u.phone, u.email].filter(Boolean).join(' · ')))}</div>
+          ${o.note ? `<div class="text-[13px] text-ink-2 mt-0.5">${esc(o.note)}</div>` : ''}`;
+      const wideActs = actionsFor(true);
+      return {
+        row: `<tr class="${late ? 'is-overdue' : ''} ${o.status === 'passed' ? 'text-muted' : ''}">
+        <td class="whitespace-nowrap"><div class="tabular-nums text-[14px] text-ink">${esc(o.id)}</div><div class="tabular-nums text-[13px] text-muted">${esc(fmtShort(o.createdAt))}</div></td>
+        <td>${itemCell(r.item)}</td>
+        <td class="min-w-[180px] max-w-[230px]"><div class="text-ink">${esc(u.name)}</div>
+          ${contact}
+          ${recv}</td>
+        <td class="num tabular-nums whitespace-nowrap ${o.status === 'passed' ? 'text-muted line-through' : 'text-ink'}">${money(o.amount)}</td>
+        <td class="whitespace-nowrap">${statusBadge(o.status)}${timing}</td>
+        <td class="text-right">${actionsFor(false)}</td></tr>`,
+        card: `<li class="py-5 ${late ? 'is-overdue' : ''} ${o.status === 'passed' ? 'text-muted' : ''}">
+          ${cardHead(r.item, money(o.amount), o.status === 'passed')}
+          <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3">
+            <div class="min-w-0"><div class="text-[13px] text-muted">Pemenang</div><div class="text-ink truncate">${esc(u.name)}</div>${contact}${recv}</div>
+            <div class="min-w-0"><div class="text-[13px] text-muted">Invois</div><div class="tabular-nums text-[14px] text-ink truncate">${esc(o.id)}</div>
+              <div class="mt-2">${statusBadge(o.status)}</div>${timing}</div>
+          </div>
+          ${wideActs ? `<div class="mt-4">${wideActs}</div>` : ''}</li>`,
+      };
+    }
+
+    /* ---------- actions ---------- */
+    document.getElementById('pills').addEventListener('click', e => { const b = e.target.closest('[data-st]'); if (b) { filt.status = b.dataset.st; render(); } });
+    document.getElementById('q').oninput = e => { filt.q = e.target.value; render(); };
+    document.getElementById('tbl').addEventListener('click', e => {
+      if (e.target.closest('[data-clear]')) { filt.status = 'all'; filt.q = ''; document.getElementById('q').value = ''; render(); return; }
+      const b = e.target.closest('[data-act]'); if (!b) return;
+      const s = EB.store.get();
+      const o = s.orders.find(x => x.id === b.dataset.id);
+      if (b.dataset.act === 'hand' || b.dataset.act === 'unhand') {
+        if (!o || o.status !== 'paid') { toast('Invois ini sudah dikemas kini.', 'warn'); render(); return; }
+        if (b.dataset.act === 'hand') askHandover(o, s); else undoHandover(o);
+        return;
+      }
+      if (!o || o.status !== 'unpaid') { toast('Invois ini sudah dikemas kini.', 'warn'); render(); return; }
+      if (b.dataset.act === 'pass') askPass(o, s);
+      if (b.dataset.act === 'paid') askPaid(o, s);
+    });
+
+    function askPass(o, s) {
+      const item = s.items.find(i => i.id === o.itemId) || { title: '(item)' };
+      const nx = nextBidder(s, o);
+      const cur = EB.users.byId(o.userId);
+      const late = o.dueAt < Date.now();
+      modal({
+        title: 'Pindah ke pembida kedua?',
+        body: `<p class="mb-4 text-[14px]"><b class="font-medium text-ink">${esc(cur.name)}</b> ${late ? 'tidak membayar dalam tempoh untuk' : 'masih dalam tempoh bayaran untuk'} invois <span class="tabular-nums">${esc(o.id)}</span> (${esc(item.title)}).</p>
+          <dl class="border-y border-line divide-line mb-4 text-[14px]">
+            <div class="flex justify-between gap-3 py-2"><dt class="text-muted">Pemenang asal</dt><dd class="text-muted line-through text-right">${esc(cur.name)} · <span class="tabular-nums">${money(o.amount)}</span></dd></div>
+            <div class="flex justify-between gap-3 py-2"><dt class="text-muted">Tawaran kepada</dt>${nx ? `<dd class="font-medium text-ink text-right">${esc(EB.users.byId(nx.userId).name)} · <span class="tabular-nums">${money(nx.amount)}</span></dd>` : '<dd class="font-medium text-[var(--live)]">Tiada pembida lain</dd>'}</div>
+          </dl>
+          <p class="text-[13px] text-muted">${nx ? 'Invois asal ditandakan "Dipindah" dan invois baharu dihantar kepada pembida seterusnya pada harga bidaan tertingginya.' : 'Item akan ditutup tanpa pemenang.'}</p>
+          ${late ? '' : '<p class="mt-3 text-[13px] text-ink-2 border-l-2 border-[var(--warn)] bg-[var(--warn-soft)] px-3 py-2 rounded-r">Tempoh bayaran belum tamat. Pastikan pemenang telah dihubungi sebelum memindah.</p>'}`,
+        actions: [{ label: 'Batal' }, { label: nx ? 'Ya, pindah' : 'Tutup tanpa pemenang', danger: true, onClick: () => {
+          const res = A.passToNext(o.id);
+          if (!res || !res.ok) { toast((res && res.reason) || 'Tidak berjaya. Cuba lagi.', 'error'); return; }
+          if (res.next) toast('Tawaran kedua dihantar kepada ' + EB.users.byId(res.next.userId).name + ' (' + money(res.next.amount) + ').', 'success');
+          else toast('Tiada pembida lain. Item ditutup tanpa pemenang.', 'warn');
+        } }],
+      });
+    }
+
+    function askHandover(o, s) {
+      const t = s.tenants.find(x => x.slug === slug);
+      const item = s.items.find(i => i.id === o.itemId) || { title: '(item)' };
+      const u = EB.users.byId(o.userId);
+      const note = fulfilmentConf(t).pickupNote;
+      modal({
+        title: 'Tandakan sudah diserahkan',
+        body: `<div class="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-line"><div class="min-w-0"><div class="font-medium text-ink">${esc(item.title)}</div>
+            <div class="text-[13px] text-muted">${esc(u.name)} · <span class="tabular-nums">${esc(o.id)}</span></div></div><div class="tabular-nums text-[20px] font-normal text-ink whitespace-nowrap">${money(o.amount)}</div></div>
+          <p class="text-[14px]">Sahkan item ini telah diserahkan kepada <b class="font-medium text-ink">${esc(u.name)}</b>${o.ref ? ` (resit <span class="tabular-nums">${esc(o.ref)}</span>)` : ''}.</p>
+          ${note ? `<p class="mt-3 text-[13px] text-ink-2 border-l-2 border-[var(--line-strong)] bg-tile px-3 py-2 rounded-r">${esc(note)}</p>` : ''}`,
+        actions: [{ label: 'Batal' }, { label: 'Sudah diserahkan', primary: true, onClick: () => {
+          let ok = false;
+          EB.store.update(st => {
+            const x = st.orders.find(y => y.id === o.id);
+            if (!x || x.status !== 'paid' || x.handedOver) return;
+            x.handedOver = Date.now(); ok = true;
+          });
+          toast(ok ? 'Invois ' + o.id + ': item ditandakan sudah diserahkan.' : 'Invois ini sudah dikemas kini.', ok ? 'success' : 'warn');
+        } }],
+      });
+    }
+
+    function undoHandover(o) {
+      EB.store.update(st => { const x = st.orders.find(y => y.id === o.id); if (x) x.handedOver = null; });
+      toast('Penyerahan dibatalkan untuk invois ' + o.id + '.');
+    }
+
+    function askPaid(o, s) {
+      const item = s.items.find(i => i.id === o.itemId) || { title: '(item)' };
+      const u = EB.users.byId(o.userId);
+      const fc = fulfilmentConf(s.tenants.find(x => x.slug === slug));
+      const both = fc.pickup && fc.post;
+      const ff0 = fc.pickup && (fc.default === 'pickup' || !fc.post) ? 'pickup' : 'post';
+      modal({
+        title: 'Tandakan sebagai dibayar',
+        body: `<div class="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-line"><div class="min-w-0"><div class="font-medium text-ink truncate">${esc(item.title)}</div>
+            <div class="text-[13px] text-muted">${esc(u.name)} · <span class="tabular-nums">${esc(o.id)}</span></div></div><div class="tabular-nums text-[20px] font-normal text-ink whitespace-nowrap">${money(o.amount)}</div></div>
+          <div class="space-y-4">
+            <div><label class="label" for="pm-m">Kaedah bayaran</label><select id="pm-m" data-m class="input"><option>Pindahan bank</option><option>DuitNow QR</option><option>Tunai</option><option>Lain-lain</option></select></div>
+            <div><label class="label" for="pm-r">No. rujukan</label><input id="pm-r" data-r class="input tabular-nums" placeholder="cth. MBB20261112-0042"><p class="hint">Pilihan. Jika kosong, nombor rujukan manual dijana.</p></div>
+            ${both ? `<fieldset><legend class="label">Cara terima item</legend><div class="flex flex-wrap gap-x-5 gap-y-1">
+                <label class="inline-flex items-center gap-2 text-[15px] text-ink min-h-[44px] cursor-pointer"><input type="radio" name="pm-f" value="pickup" class="h-4 w-4 accent-[var(--ink)]" ${ff0 === 'pickup' ? 'checked' : ''}>${esc(fc.pickupLabel || 'Ambil sendiri')}</label>
+                <label class="inline-flex items-center gap-2 text-[15px] text-ink min-h-[44px] cursor-pointer"><input type="radio" name="pm-f" value="post" class="h-4 w-4 accent-[var(--ink)]" ${ff0 === 'post' ? 'checked' : ''}>Pos</label></div></fieldset>` : ''}
+            <div data-addr class="${ff0 === 'pickup' ? 'hidden' : ''}"><label class="label" for="pm-a">Alamat penghantaran</label><textarea id="pm-a" data-a rows="2" class="input" placeholder="Alamat pembeli">${esc(fulfilmentOf(o, s.tenants.find(x => x.slug === slug)) === 'post' ? o.address : '')}</textarea><p data-ae class="field-error hidden">Sila isi alamat penghantaran untuk pos.</p></div>
+          </div>`,
+        onOpen: el => {
+          el.querySelectorAll('[name="pm-f"]').forEach(r => r.onchange = () => {
+            el.querySelector('[data-addr]').classList.toggle('hidden', r.value === 'pickup' && r.checked);
+            if (r.value === 'post' && r.checked) el.querySelector('[data-addr]').classList.remove('hidden');
+          });
+        },
+        actions: [{ label: 'Batal' }, { label: 'Sahkan bayaran', primary: true, onClick: (close, el) => {
+          const method = el.querySelector('[data-m]').value;
+          const ref = el.querySelector('[data-r]').value.trim();
+          const picked = el.querySelector('[name="pm-f"]:checked');
+          const ff = picked ? picked.value : ff0;
+          const typed = el.querySelector('[data-a]').value.trim();
+          if (ff === 'post' && !typed) {
+            const ae = el.querySelector('[data-ae]'); ae.classList.remove('hidden');
+            el.querySelector('[data-a]').setAttribute('aria-invalid', 'true'); el.querySelector('[data-a]').focus();
+            return false;
+          }
+          const address = ff === 'pickup' ? (fc.pickupLabel || 'Ambil semasa majlis') + ': ' + u.name : typed;
+          let ok = false;
+          EB.store.update(st => {
+            const x = st.orders.find(y => y.id === o.id);
+            if (!x || x.status !== 'unpaid') return;
+            x.status = 'paid'; x.paidAt = Date.now(); x.method = method + ' (manual)';
+            x.ref = ref || ('MN' + EB.store.rand(100000, 999999));
+            x.address = address;
+            x.meta = Object.assign({}, x.meta, { fulfilment: ff });
+            if (!EB.users.isBot(x.userId)) {
+              const how = ff === 'pickup' ? 'Sila ambil item anda: ' + (fc.pickupNote || fc.pickupLabel || 'hubungi penjual.') : 'Item akan dipos dalam 3 hari bekerja.';
+              st.inbox.push({ id: EB.store.uid('msg'), userId: x.userId, tenant: x.tenant, type: 'paid', itemId: x.itemId, at: Date.now(), read: false,
+                title: 'Pembayaran disahkan', body: 'Penjual telah mengesahkan bayaran ' + money(x.amount) + ' untuk "' + item.title + '" (' + method + '). ' + how });
+            }
+            ok = true;
+          });
+          toast(ok ? 'Invois ' + o.id + ' ditandakan dibayar.' : 'Invois ini sudah dikemas kini.', ok ? 'success' : 'warn');
+        } }],
+      });
+    }
+
+    let raf = 0;
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); };
+    render();
+    EB.store.subscribe(schedule);
+    setInterval(schedule, 15000);
+  </script>
+</body>
+</html>

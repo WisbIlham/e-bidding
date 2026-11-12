@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bidaan semasa saya · eBid Baju</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/data.js"></script>
+  <script src="assets/store.js"></script>
+  <script src="assets/auction.js"></script>
+  <script src="assets/ui.js"></script>
+</head>
+<body class="min-h-screen">
+  <div id="eb-header"></div>
+  <main class="max-w-6xl mx-auto px-4 md:px-6 py-8" id="app"></main>
+  <div id="eb-footer"></div>
+  <script>
+    EB.init({ area: 'bidder', active: 'bids', title: 'Bidaan semasa saya' });
+    const U = EB.ui;
+    let tab = 'all';
+    const prevHigh = {}; // itemId -> last seen highest amount (for flash)
+
+    function loginNote(msg) {
+      return `<div class="tile max-w-xl px-6 py-10 md:px-10 md:py-12">
+        <p class="font-serif text-[22px] md:text-[26px] leading-snug text-ink">${msg}</p>
+        <a href="${U.link('login.html', { next: location.pathname + location.search + location.hash })}" class="btn btn-brand btn-lg mt-6 w-full sm:w-auto">Log masuk</a>
+      </div>`;
+    }
+
+    /** My result for one item: leading | outbid | won | lost (+ order) */
+    function myStatus(s, item, uid) {
+      const st = EB.auction.status(item);
+      const h = EB.auction.highest(item.id, s);
+      if (st !== 'ended') return { key: h && h.userId === uid ? 'leading' : 'outbid', st };
+      const o = s.orders.filter(x => x.itemId === item.id && x.userId === uid).sort((a, b) => b.createdAt - a.createdAt)[0];
+      if (o && o.status !== 'passed') return { key: 'won', st, order: o };
+      if (o) return { key: 'lost', st, order: o, passed: true };
+      if (!item.result) return { key: h && h.userId === uid ? 'won' : 'lost', st, pending: true };
+      return { key: 'lost', st };
+    }
+
+    /* one cell of the grey summary strip: 2x2 on phones, 1x4 on desktop */
+    function stat(label, value, sub) {
+      return `<div class="min-w-0">
+        <div class="eyebrow">${label}</div>
+        <div class="price mt-2 text-[28px] md:text-[36px] text-ink whitespace-nowrap">${value}</div>
+        <div class="meta mt-1.5">${sub}</div>
+      </div>`;
+    }
+
+    function row(r) {
+      const { item, mine, high, res, count } = r;
+      const changed = prevHigh[item.id] !== undefined && prevHigh[item.id] !== high;
+      prevHigh[item.id] = high;
+      const live = res.st === 'live';
+      const o = res.order;
+      const href = U.link('item.html', { id: item.id });
+      const iLead = mine >= high;
+
+      // the one action this row needs, if any
+      let action = '';
+      if (live && res.key === 'outbid') action = `<a href="${href}" class="btn btn-brand w-full md:w-auto md:!min-h-[44px]">Bida semula</a>`;
+
+      // status shown beside the lot number
+      let badge = U.statusBadge(res.key);
+      if (res.key === 'won' && o && o.status === 'paid') badge = U.statusBadge('paid');
+
+      // a second line under the row for payment / outcome
+      let foot = '';
+      if (res.key === 'won' && o && o.status === 'unpaid') {
+        const expired = Date.now() > o.dueAt;
+        foot = expired
+          ? `<p class="meta">Tempoh bayaran untuk invois <span class="tabular-nums">${U.esc(o.id)}</span> telah tamat. Sila hubungi kedai.</p>`
+          : `<div class="tile flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 px-4 py-4 sm:px-5">
+              <div class="min-w-0 text-[15px] leading-snug text-ink-2">
+                ${U.statusBadge('unpaid')}
+                <p class="mt-1">Invois <span class="tabular-nums">${U.esc(o.id)}</span> · bayar dalam <span class="tabular-nums whitespace-nowrap text-ink" data-countdown-end="${o.dueAt}">${U.countdown(o.dueAt - Date.now())}</span></p>
+              </div>
+              <a href="${U.link('checkout.html', { order: o.id })}" class="btn btn-brand w-full sm:w-auto sm:ml-auto md:!min-h-[44px]">Bayar sekarang</a>
+            </div>`;
+      } else if (res.key === 'won' && o && o.status === 'paid') {
+        const ff = (EB.tenant.current().settings || {}).fulfilment;
+        const pickupLabel = (ff && ff.pickupLabel) || 'Ambil semasa majlis';
+        const pickup = o.fulfilment ? o.fulfilment === 'pickup' : String(o.address || '').indexOf(pickupLabel + ':') === 0;
+        const next = pickup ? pickupLabel + '.' : 'Penjual akan pos dalam 3 hari bekerja.';
+        foot = `<div class="flex flex-col sm:flex-row sm:items-center gap-x-5 gap-y-1">
+            <p class="meta min-w-0">${o.method ? U.esc(o.method) + ' · ' : ''}${o.paidAt ? '<span class="tabular-nums">' + U.fmtDate(o.paidAt) + '</span> · ' : ''}${o.ref ? 'Ruj <span class="tabular-nums">' + U.esc(o.ref) + '</span> · ' : ''}${U.esc(next)}</p>
+            <a class="link-arrow min-h-[44px] shrink-0 sm:ml-auto" href="${U.link('checkout.html', { order: o.id })}">Lihat resit</a>
+          </div>`;
+      } else if (res.pending) {
+        foot = `<p class="meta">Menunggu keputusan rasmi.</p>`;
+      } else if (res.passed) {
+        foot = `<p class="meta">Invois luput. Item ditawarkan kepada pembida seterusnya.</p>`;
+      }
+
+      const time = live
+        ? `<span class="tabular-nums text-[16px] text-ink" data-countdown-end="${item.endAt}">${U.countdown(item.endAt - Date.now())}</span>`
+        : res.st === 'upcoming'
+          ? `<span class="tabular-nums text-[16px] text-[var(--warn)]" data-countdown-start="${item.startAt}">${U.countdown(item.startAt - Date.now())}</span>`
+          : `<span class="tabular-nums text-[15px] text-ink-2">${U.fmtDate(item.endAt)}</span>`;
+
+      return `<li class="py-6 ${changed ? 'flash' : ''}">
+        <div class="flex gap-4">
+          <a href="${href}" class="shrink-0" tabindex="-1" aria-hidden="true"><img src="${U.itemImage(item)}" alt="" class="h-[70px] w-14 rounded-lg object-cover bg-tile"></a>
+          <div class="min-w-0 flex-1 md:grid md:grid-cols-[minmax(0,1fr)_120px_120px_170px_auto] md:items-center md:gap-x-6">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1"><span class="lot">${U.lotNo(item)}</span>${badge}</div>
+              <a href="${href}" class="lot-title mt-1 block text-[19px] md:text-[20px] text-ink hover:underline underline-offset-4 decoration-1 line-clamp-2">${U.esc(item.title)}</a>
+              <div class="meta mt-1">${U.esc(item.category)} · Saiz ${U.esc(item.size)} · <span class="tabular-nums">${count}</span> bidaan</div>
+            </div>
+            <div class="mt-4 -ml-[72px] grid grid-cols-2 gap-x-3 gap-y-3 border-t border-line pt-4 md:ml-0 md:mt-0 md:border-t-0 md:pt-0 md:contents">
+              <div class="md:text-right">
+                <div class="eyebrow">Bidaan saya</div>
+                <div class="price mt-0.5 text-[18px] whitespace-nowrap ${iLead ? 'text-[var(--ok)]' : 'text-ink'}">${U.money(mine)}</div>
+              </div>
+              <div class="md:text-right">
+                <div class="eyebrow">${res.st === 'ended' ? 'Harga akhir' : 'Tertinggi'}</div>
+                <div class="price mt-0.5 text-[18px] whitespace-nowrap text-ink ${changed ? 'bump inline-block' : ''}">${U.money(high)}</div>
+              </div>
+              <div class="col-span-2 md:col-span-1 md:text-right">
+                <div class="eyebrow">${live ? 'Baki masa' : res.st === 'upcoming' ? 'Bermula' : 'Tamat'}</div>
+                <div class="whitespace-nowrap">${time}</div>
+              </div>
+            </div>
+            <div class="${action ? '-ml-[72px] mt-4 md:ml-0 md:mt-0' : 'hidden md:block'} md:text-right">${action}</div>
+          </div>
+        </div>
+        ${foot ? `<div class="mt-4 md:ml-[72px]">${foot}</div>` : ''}
+      </li>`;
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+      const user = EB.auth.user();
+      const t = EB.tenant.current();
+      const head = meta => `<header class="mb-8 md:mb-12">
+          <h1 class="font-serif text-[30px] md:text-[40px] font-normal leading-[1.1] text-ink">Bidaan semasa saya</h1>
+          <p class="mt-2 text-[16px] text-muted">${meta}</p>
+        </header>`;
+      if (!user) { app.innerHTML = head(U.esc(t.name)) + loginNote('Log masuk untuk melihat bidaan anda.'); return; }
+
+      const s = EB.store.get();
+      const uid = user.id, slug = t.slug;
+      const myBids = s.bids.filter(b => b.userId === uid && b.tenant === slug);
+      const ids = [...new Set(myBids.map(b => b.itemId))];
+      const rows = ids.map(id => {
+        const item = s.items.find(i => i.id === id);
+        if (!item) return null;
+        const all = EB.auction.bidsFor(id, s);
+        const mine = Math.max(...myBids.filter(b => b.itemId === id).map(b => b.amount));
+        const h = all[0];
+        return { item, mine, high: h ? h.amount : mine, count: all.length, res: myStatus(s, item, uid) };
+      }).filter(Boolean);
+      // live first (ending soonest), then unpaid wins, then the rest by end date desc
+      rows.sort((a, b) => {
+        const la = a.res.st === 'live', lb = b.res.st === 'live';
+        if (la !== lb) return la ? -1 : 1;
+        if (la) return a.item.endAt - b.item.endAt;
+        const ua = a.res.order && a.res.order.status === 'unpaid', ub = b.res.order && b.res.order.status === 'unpaid';
+        if (ua !== ub) return ua ? -1 : 1;
+        return b.item.endAt - a.item.endAt;
+      });
+
+      const liveRows = rows.filter(r => r.res.st === 'live');
+      const leading = liveRows.filter(r => r.res.key === 'leading').length;
+      const won = rows.filter(r => r.res.key === 'won');
+      const lost = rows.filter(r => r.res.key === 'lost');
+      const feeTotal = s.fees.filter(f => f.userId === uid && f.tenant === slug).reduce((a, f) => a + f.amount, 0);
+      const lim = t.settings.winLimit;
+      const wc = EB.auction.winningCount(uid, slug, s);
+      const unpaid = won.filter(r => r.res.order && r.res.order.status === 'unpaid' && Date.now() <= r.res.order.dueAt);
+
+      const tabs = [['all', 'Semua', rows.length], ['live', 'Sedang berlangsung', liveRows.length], ['won', 'Menang', won.length], ['lost', 'Tidak berjaya', lost.length]];
+      const shown = tab === 'live' ? liveRows : tab === 'won' ? won : tab === 'lost' ? lost : rows;
+      const pct = lim ? Math.min(100, Math.round((wc / lim) * 100)) : 0;
+      const full = lim && wc >= lim;
+
+      const emptyMsg = !rows.length
+        ? { text: 'Anda belum membida mana-mana item di kedai ini.', btn: `<a href="${U.link('shop.html')}" class="btn btn-brand btn-lg mt-6 w-full sm:w-auto">Lihat item lelongan</a>` }
+        : { text: { live: 'Tiada bidaan yang sedang berlangsung.', won: 'Belum ada item yang anda menangi.', lost: 'Tiada bidaan yang tidak berjaya.' }[tab] || 'Tiada item.', btn: `<button data-tab="all" class="link-arrow mt-4 min-h-[44px]">Lihat semua bidaan</button>` };
+
+      app.innerHTML = head(`${U.esc(t.name)} · Bidaan tidak boleh dibatalkan selepas dihantar.`) + `
+        <section aria-label="Ringkasan" class="tile grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-7 px-5 py-6 md:px-8 md:py-8">
+          ${stat('Bidaan aktif', liveRows.length, 'item sedang berlangsung')}
+          ${stat('Sedang tertinggi', leading, liveRows.length ? `daripada <span class="tabular-nums">${liveRows.length}</span> item aktif` : 'tiada bidaan aktif')}
+          ${stat('Menang', won.length, unpaid.length ? `<span class="text-[var(--warn)]"><span class="tabular-nums">${unpaid.length}</span> belum bayar</span>` : won.length ? 'semua telah dibayar' : 'belum ada')}
+          ${stat('Yuran dibayar', U.money(feeTotal), 'tidak dikembalikan')}
+        </section>
+
+        ${lim ? `<div class="mt-6">
+          <p class="meta">Had kelayakan menang: <span class="tabular-nums ${full ? 'text-[var(--live)]' : 'text-ink'}">${wc} / ${lim}</span> item di kedai ini${full ? '. Had dicapai: anda tidak boleh membida item lain sehingga bidaan semasa selesai.' : ' (termasuk item yang anda sedang tertinggi).'}</p>
+          <div class="mt-2 h-[2px] w-full max-w-sm bg-line" role="progressbar" aria-valuemin="0" aria-valuemax="${lim}" aria-valuenow="${wc}" aria-label="Had kelayakan menang"><div class="h-full ${full ? 'bg-[var(--live)]' : 'bg-ink'}" style="width:${pct}%"></div></div>
+        </div>` : ''}
+
+        <nav class="tabs mt-10 md:mt-14" role="tablist" aria-label="Tapis bidaan">
+          ${tabs.map(([k, l, n]) => `<button data-tab="${k}" role="tab" class="tab" aria-selected="${tab === k}">${l}<span class="count">${n}</span></button>`).join('')}
+        </nav>
+
+        ${shown.length
+          ? `<ul class="divide-line border-b border-line">${shown.map(row).join('')}</ul>`
+          : `<div class="tile mt-6 px-6 py-12 md:py-16 text-center">
+              <p class="font-serif text-[22px] md:text-[26px] leading-snug text-ink">${emptyMsg.text}</p>
+              ${emptyMsg.btn}
+            </div>`}`;
+
+      app.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
+      U.tickCountdowns();
+    }
+
+    render();
+    EB.store.subscribe(render);
+  </script>
+</body>
+</html>

@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pembayaran · eBid Baju</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/data.js"></script>
+  <script src="assets/store.js"></script>
+  <script src="assets/auction.js"></script>
+  <script src="assets/ui.js"></script>
+  <script src="assets/pay.js"></script>
+  <style>
+    /* large tappable choice rows on grey tiles; the chosen row turns white with a 2px ink ring */
+    .pm { background: var(--tile); border-radius: 12px; min-height: 64px; transition: background-color .12s, box-shadow .12s; }
+    .pm:hover { background: color-mix(in srgb, var(--ink) 4%, var(--tile)); }
+    .pm:has(input[type=radio]:checked) { background: var(--surface); box-shadow: inset 0 0 0 2px var(--ink); }
+    .pm:has(input[type=radio]:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+    .pm input[type=radio] { appearance: none; -webkit-appearance: none; width: 22px; height: 22px; flex: none; margin: 1px 0 0;
+      border: 2px solid var(--line-strong); border-radius: 50%; background: var(--surface); display: grid; place-content: center; cursor: pointer; }
+    .pm input[type=radio]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); transform: scale(0); transition: transform .12s; }
+    .pm input[type=radio]:checked { border-color: var(--ink); }
+    .pm input[type=radio]:checked::before { transform: scale(1); }
+    .pm input[type=radio]:focus-visible { outline: none; }
+    .co-sec + .co-sec { border-top: 1px solid var(--line); }
+    .co-bar { padding-bottom: env(safe-area-inset-bottom); }
+    @media (max-width: 1023px) {
+      body:has(.co-bar) #eb-footer { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+      /* toasts sit at the top on phones (assets/app.css), so the sticky pay bar stays clear */
+    }
+    @media print {
+      #eb-header, #eb-footer, .no-print, #eb-toasts { display: none !important; }
+      html, body { background: #fff; }
+      .elevated { box-shadow: none; border: 1px solid #bbb; }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div id="eb-header"></div>
+  <main class="max-w-6xl mx-auto px-4 md:px-6 py-8" id="app"></main>
+  <div id="eb-footer"></div>
+  <script>
+    EB.init({ area: 'bidder', active: 'bids', title: 'Pembayaran' });
+    const U = EB.ui;
+    const orderId = U.qs('order');
+
+    const WEST = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Selangor', 'Terengganu', 'W.P. Kuala Lumpur', 'W.P. Putrajaya'];
+    const EAST = ['Sabah', 'Sarawak', 'W.P. Labuan'];
+    const postageFor = negeri => (EAST.includes(negeri) ? 15 : negeri ? 8 : 0);
+    const zoneOf = negeri => (EAST.includes(negeri) ? 'Malaysia Timur' : 'Semenanjung');
+
+    /* Bayarcash channels. The bank / card / QR step happens on the Bayarcash page. */
+    const CHANNELS = [
+      { id: 'fpx', name: 'FPX perbankan dalam talian', meta: 'Bayar terus dari akaun bank anda', code: 'FPX' },
+      { id: 'duitnow', name: 'DuitNow QR', meta: 'Imbas dengan app bank atau e-dompet', code: 'QR' },
+      { id: 'card', name: 'Kad debit / kredit', meta: 'Visa, Mastercard', code: 'KAD' },
+    ];
+
+    const isDonation = t => !!(t && (t.beneficiary || t.event));
+
+    /** How the winner can receive the item. null = shop has no setting (post only, as before). */
+    function fulfilOf(t) {
+      const f = t && t.settings && t.settings.fulfilment;
+      if (!f) return null;
+      const opts = [];
+      if (f.pickup) opts.push('pickup');
+      if (f.post !== false) opts.push('post');
+      if (!opts.length) return null;
+      return {
+        opts,
+        def: opts.includes(f.default) ? f.default : opts[0],
+        pickupLabel: f.pickupLabel || 'Ambil semasa majlis',
+        pickupNote: f.pickupNote || '',
+      };
+    }
+    /** Was this (paid) order set for pickup? Older orders have no `fulfilment` field. */
+    function pickupOf(o, t) {
+      if (o.fulfilment) return o.fulfilment === 'pickup';
+      const ff = fulfilOf(t);
+      return !!(ff && o.address && o.address.indexOf(ff.pickupLabel + ':') === 0);
+    }
+
+    /** Plain statement of where a donation goes (PAS KB and other charity shops) */
+    function donationNote(t, postLine) {
+      return `<div>
+        <div class="eyebrow">Sumbangan</div>
+        ${t.event ? `<p class="mt-1 text-[16px] text-ink leading-snug">${U.esc(t.event)}</p>` : ''}
+        ${t.beneficiary ? `<p class="mt-1 text-[15px] text-ink-2">${U.esc(t.beneficiary)}</p>` : ''}
+        ${postLine ? `<p class="meta mt-1">${postLine}</p>` : ''}
+      </div>`;
+    }
+
+    /* ---------- form draft: kept in this tab while the buyer is on Bayarcash ---------- */
+    const DRAFT_KEY = 'ebid_checkout_draft:' + (orderId || '');
+    const draft = {
+      get() { try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { return null; } },
+      set(v) { try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(v)); } catch (e) { /* ignore */ } },
+      clear() { try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ } },
+    };
+
+    /** Copy the delivery choice from a paid intent onto the order (same values written before redirect). */
+    function applyIntent(it) {
+      const m = it.meta || {};
+      EB.store.update(s => {
+        const x = s.orders.find(y => y.id === it.orderId);
+        if (!x || x.status !== 'paid') return;
+        if (m.fulfilment) x.fulfilment = m.fulfilment;
+        if (m.shipping != null) { x.shipping = m.shipping; x.total = x.amount + m.shipping; }
+        if (m.shipZone !== undefined) x.shipZone = m.shipZone;
+        if (m.shipState !== undefined) x.shipState = m.shipState;
+        if (m.recipient) x.recipient = m.recipient;
+        if (!x.address && m.address) x.address = m.address;
+      });
+    }
+
+    let lastKey = null; // re-render only when the order itself changes
+    let receipt = null; // order just paid (back from Bayarcash)
+    let receiptIntent = null;
+    let notice = null; // { kind: 'failed'|'cancelled'|'unknown', intent }
+
+    /* ---------- back from Bayarcash: ?pay_intent=&pay_status= ---------- */
+    (function handleReturn() {
+      const back = EB.pay.result();
+      if (!back) return;
+      EB.pay.clearResult();
+      const it = back.intent;
+      if (!it || it.kind !== 'order' || it.orderId !== orderId) { notice = { kind: 'unknown' }; return; }
+      if (back.status === 'success') {
+        applyIntent(it);
+        draft.clear();
+        receipt = orderId;
+        receiptIntent = it;
+        U.toast('Pembayaran berjaya. Rujukan ' + it.ref + '.', 'success');
+      } else if (back.status === 'failed') {
+        notice = { kind: 'failed', intent: it };
+      } else {
+        notice = { kind: 'cancelled', intent: it };
+      }
+    })();
+
+    function shell(title, body, actions) {
+      return `<div class="tile max-w-xl mx-auto mt-4 md:mt-10 px-6 py-10 md:px-12 md:py-14 text-center">
+        <h1 class="font-serif text-[28px] md:text-[34px] font-normal leading-[1.15] text-ink">${title}</h1>
+        <p class="mt-3 text-[16px] text-ink-2 max-w-md mx-auto">${body}</p>
+        <div class="mt-7 flex flex-col sm:flex-row gap-x-6 gap-y-3 items-center justify-center">${actions}</div>
+      </div>`;
+    }
+    const backBtn = `<a href="${U.link('my-bids.html')}" class="btn btn-brand btn-lg w-full sm:w-auto">Ke Bidaan saya</a>`;
+
+    /* ---------- receipt ---------- */
+    function receiptView(o, item, t) {
+      const ship = o.shipping != null ? o.shipping : 0;
+      const total = o.total != null ? o.total : o.amount + ship;
+      const don = isDonation(t);
+      const ff = fulfilOf(t);
+      const pickup = pickupOf(o, t);
+      const it = receiptIntent && receiptIntent.orderId === o.id ? receiptIntent : null;
+      const ref = (it && it.ref) || o.ref || '-';
+      const user = EB.users.byId(o.userId) || {};
+      const rcp = o.recipient || (it && it.meta && it.meta.recipient) || null;
+      const dRow = (k, v) => `<div class="flex justify-between gap-6 py-2"><dt class="text-muted shrink-0">${k}</dt><dd class="text-right text-ink min-w-0 break-words">${v}</dd></div>`;
+      const aRow = (k, v) => `<tr><td class="py-2 pr-4 text-ink-2">${k}</td><td class="py-2 text-right tabular-nums text-ink whitespace-nowrap">${v}</td></tr>`;
+      const pad = 'px-5 sm:px-8';
+      const pickupLabel = ff ? ff.pickupLabel : 'Ambil semasa majlis';
+      const pickupNote = ff ? ff.pickupNote : '';
+
+      // "Penghantaran": who collects, or where it is posted
+      let delivery = '';
+      if (pickup) {
+        const who = rcp ? `${rcp.name}, ${rcp.phone}` : String(o.address || '').replace(pickupLabel + ':', '').trim();
+        delivery = `<div class="${pad} py-5 border-b border-line">
+          <div class="eyebrow">Penghantaran</div>
+          <p class="mt-1 text-[16px] text-ink">${U.esc(pickupLabel)}</p>
+          ${who ? `<p class="text-[15px] text-ink-2">${U.esc(who)}</p>` : ''}
+          ${t.event ? `<p class="meta mt-1">${U.esc(t.event)}</p>` : ''}
+        </div>
+        ${pickupNote ? `<div class="${pad} py-5 border-b border-line">
+          <div class="eyebrow">Langkah seterusnya</div>
+          <p class="mt-1 text-[15px] text-ink-2">${U.esc(pickupNote)}</p>
+        </div>` : ''}`;
+      } else if (o.address) {
+        delivery = `<div class="${pad} py-5 border-b border-line">
+          <div class="eyebrow">Penghantaran</div>
+          <p class="mt-1 text-[16px] text-ink">Pos ke alamat</p>
+          <p class="mt-0.5 whitespace-pre-line text-[15px] text-ink-2">${U.esc(o.address)}</p>
+          <p class="meta mt-1">${U.esc(t.name)} akan pos dalam 3 hari bekerja.</p>
+        </div>`;
+      }
+
+      return `<div class="max-w-2xl mx-auto">
+        <article class="elevated" aria-label="Resit">
+          <header class="${pad} pt-7 pb-6 sm:pt-9 border-b border-line">
+            <div class="flex items-center justify-between gap-4">
+              <div class="eyebrow">${don ? 'Resit sumbangan' : 'Resit pembayaran'}</div>
+              ${U.statusBadge('paid')}
+            </div>
+            <h1 class="mt-2 font-serif text-[30px] md:text-[40px] font-normal leading-[1.1] text-ink">${don ? 'Sumbangan diterima' : 'Pembayaran diterima'}</h1>
+            <p class="mt-2 text-[16px] text-muted break-words">${U.esc(t.name)} · ${U.esc(t.domain || '')}</p>
+          </header>
+
+          <div class="${pad} py-6 border-b border-line">
+            <div class="text-[15px] text-muted">Jumlah dibayar</div>
+            <div class="price mt-1 text-[36px] md:text-[44px] text-ink">${U.money(total)}</div>
+          </div>
+
+          <dl class="${pad} py-4 border-b border-line text-[15px]">
+            ${dRow('No. rujukan Bayarcash', `<span class="tabular-nums">${U.esc(ref)}</span>`)}
+            ${dRow('No. invois', `<span class="tabular-nums">${U.esc(o.id)}</span>`)}
+            ${dRow('Tarikh', `<span class="tabular-nums">${U.fmtDate(o.paidAt || Date.now())}</span>`)}
+            ${dRow('Kaedah', U.esc(o.method || 'FPX'))}
+            ${dRow('Cara terima', pickup ? U.esc(pickupLabel) : 'Pos ke alamat')}
+            ${dRow('Pembayar', U.esc(user.name || ''))}
+          </dl>
+
+          <div class="${pad} py-5 border-b border-line flex gap-4">
+            <img src="${U.itemImage(item)}" alt="" class="h-[75px] w-[60px] rounded-lg object-cover bg-tile shrink-0">
+            <div class="min-w-0">
+              <div class="lot">${U.lotNo(item)}</div>
+              <div class="lot-title mt-0.5 text-[18px] text-ink">${U.esc(item.title)}</div>
+              <div class="meta mt-0.5">${U.esc(item.category)} · Saiz ${U.esc(item.size)} · ${U.esc(item.condition)}</div>
+            </div>
+          </div>
+
+          <div class="${pad} py-4 border-b border-line">
+            <table class="w-full text-[15px]">
+              <tbody>
+                ${aRow(don ? 'Sumbangan (bidaan menang)' : 'Harga bidaan menang', U.money(o.amount))}
+                ${aRow(pickup ? 'Ambil sendiri (tiada pos)' : 'Pos' + (o.shipZone ? ' · ' + U.esc(o.shipZone) : ''), U.money(ship))}
+              </tbody>
+              <tfoot>
+                <tr class="border-t border-line"><td class="pt-3 pb-1 pr-4 text-ink">${don && !pickup ? 'Jumlah dibayar (sumbangan + pos)' : 'Jumlah dibayar'}</td><td class="pt-3 pb-1 text-right tabular-nums text-[18px] text-ink whitespace-nowrap">${U.money(total)}</td></tr>
+              </tfoot>
+            </table>
+          </div>
+
+          ${don ? `<div class="${pad} py-5 border-b border-line">${donationNote(t)}</div>` : ''}
+
+          ${delivery}
+
+          <p class="${pad} py-5 meta">Diproses oleh Bayarcash (demo). Resit ini dijana secara automatik dan tidak memerlukan tandatangan.</p>
+        </article>
+        <div class="no-print mt-6 flex flex-col sm:flex-row gap-3">
+          <a href="${U.link('my-bids.html')}" class="btn btn-brand btn-lg sm:flex-1">Lihat bidaan saya</a>
+          <button data-print class="btn btn-outline btn-lg sm:flex-1">Cetak resit</button>
+        </div>
+      </div>`;
+    }
+
+    /* ---------- note after a failed / cancelled payment ---------- */
+    function noticeView(o) {
+      if (!notice) return '';
+      const it = notice.intent;
+      const refLine = it && it.ref ? ` Rujukan transaksi <span class="tabular-nums">${U.esc(it.ref)}</span>.` : '';
+      if (notice.kind === 'failed') {
+        return `<div role="alert" class="mb-8 rounded-xl bg-[var(--live-soft)] px-5 py-4">
+          <p class="status status-bad !text-[16px] !whitespace-normal">Bayaran gagal. Tiada caj dibuat. Sila cuba lagi.</p>
+          <p class="mt-1 text-[15px] text-ink-2">Maklumat anda masih di bawah. Anda boleh cuba bank atau kaedah lain.${refLine}</p>
+        </div>`;
+      }
+      if (notice.kind === 'cancelled') {
+        return `<div role="status" class="tile mb-8 px-5 py-4">
+          <p class="text-[16px] text-ink">Bayaran dibatalkan. Tiada caj dibuat.</p>
+          <p class="mt-1 text-[15px] text-ink-2">Maklumat anda masih di bawah. Tekan Bayar untuk cuba semula sebelum <span class="tabular-nums">${U.fmtDate(o.dueAt)}</span>.</p>
+        </div>`;
+      }
+      return `<div role="status" class="tile mb-8 px-5 py-4">
+        <p class="text-[16px] text-ink">Status bayaran tidak dapat disahkan.</p>
+        <p class="mt-1 text-[15px] text-ink-2">Invois ini masih belum dibayar. Jika akaun anda telah ditolak, semak Peti masuk sebelum cuba lagi.</p>
+      </div>`;
+    }
+
+    /* ---------- checkout form ---------- */
+    function formView(o, item, t) {
+      const user = EB.auth.user();
+      const don = isDonation(t);
+      const ff = fulfilOf(t);
+      const opt = arr => arr.map(n => `<option value="${n}">${n}</option>`).join('');
+      const field = (id, name, label, attrs, cls) => `<div class="${cls || ''}"><label class="label" for="${id}">${label}</label><input id="${id}" name="${name}" class="input" ${attrs}></div>`;
+      const radioRow = (name, value, title, meta, right, checked) => `<label class="pm flex items-start gap-4 px-4 sm:px-5 py-4 cursor-pointer">
+          <input type="radio" name="${name}" value="${value}" ${checked ? 'checked' : ''}>
+          <span class="flex-1 min-w-0">
+            <span class="flex items-baseline justify-between gap-3"><span class="min-w-0 text-[17px] leading-snug text-ink">${title}</span><span class="shrink-0 text-[15px] tabular-nums text-ink-2 whitespace-nowrap">${right}</span></span>
+            <span class="mt-1 block text-[14px] leading-snug text-muted">${meta}</span>
+          </span>
+        </label>`;
+      const h2 = (id, text, attr) => `<h2 id="${id}" class="font-serif text-[24px] md:text-[28px] font-normal leading-tight text-ink" ${attr || ''}>${text}</h2>`;
+
+      const fulfilSection = ff ? `<section class="co-sec py-8 first:pt-0" aria-labelledby="h-terima">
+          ${h2('h-terima', 'Cara terima item')}
+          <fieldset class="mt-5 grid gap-2">
+            <legend class="sr-only">Pilih cara terima item</legend>
+            ${ff.opts.includes('pickup') ? radioRow('fulfil', 'pickup', U.esc(ff.pickupLabel), U.esc(ff.pickupNote || 'Ambil item sendiri daripada urus setia.'), 'Tiada pos', ff.def === 'pickup') : ''}
+            ${ff.opts.includes('post') ? radioRow('fulfil', 'post', 'Pos ke alamat', 'Pos RM8 ke Semenanjung, RM15 ke Sabah, Sarawak dan Labuan.', 'RM8 / RM15', ff.def === 'post') : ''}
+          </fieldset>
+        </section>` : '';
+
+      return `
+        <a href="${U.link('my-bids.html')}" class="no-print -my-2 inline-flex min-h-[44px] items-center gap-2 text-[16px] text-ink-2 hover:text-ink hover:underline underline-offset-4"><span aria-hidden="true">←</span>Bidaan saya</a>
+        <header class="mt-4 mb-8 md:mb-12">
+          <h1 class="font-serif text-[30px] md:text-[40px] font-normal leading-[1.1] text-ink">${don ? 'Bayar sumbangan' : 'Pembayaran'}</h1>
+          <p class="mt-2 text-[16px] text-muted">Invois <span class="tabular-nums text-ink-2">${U.esc(o.id)}</span>${o.note ? ' · ' + U.esc(o.note) : ''} · Bayar sebelum <span class="tabular-nums">${U.fmtDate(o.dueAt)}</span> · <span class="whitespace-nowrap text-[var(--warn)]">baki <span class="tabular-nums" data-countdown-end="${o.dueAt}">${U.countdown(o.dueAt - Date.now())}</span></span></p>
+        </header>
+        ${noticeView(o)}
+
+        <form id="co" novalidate class="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-8 lg:gap-14 items-start">
+          <div class="min-w-0">
+            ${fulfilSection}
+
+            <section class="co-sec py-8 first:pt-0" aria-labelledby="h-alamat">
+              ${h2('h-alamat', 'Alamat penghantaran', 'data-recip-title')}
+              <p class="meta mt-2 hidden" data-pickup-only>Urus setia akan menyemak nama ini dengan kad pengenalan semasa penyerahan item.</p>
+              <div class="mt-5 grid sm:grid-cols-2 gap-x-4 gap-y-5">
+                <div><label class="label" for="f-nama" data-nama-label>Nama penerima</label><input id="f-nama" name="nama" class="input" value="${U.esc(user.name)}" autocomplete="name"></div>
+                ${field('f-tel', 'tel', 'No. telefon', `value="${U.esc(user.phone || '')}" inputmode="tel" autocomplete="tel" placeholder="012-345 6789"`)}
+                <div class="sm:col-span-2" data-post-only><label class="label" for="f-alamat">Alamat</label><textarea id="f-alamat" name="alamat" rows="2" class="input" autocomplete="street-address" placeholder="No. rumah, jalan, taman"></textarea></div>
+                <div data-post-only><label class="label" for="f-poskod">Poskod</label><input id="f-poskod" name="poskod" class="input" inputmode="numeric" maxlength="5" autocomplete="postal-code" placeholder="50450"></div>
+                <div data-post-only><label class="label" for="f-bandar">Bandar</label><input id="f-bandar" name="bandar" class="input" autocomplete="address-level2" placeholder="Kuala Lumpur"></div>
+                <div class="sm:col-span-2" data-post-only><label class="label" for="f-negeri">Negeri</label>
+                  <select id="f-negeri" name="negeri" class="input" autocomplete="address-level1">
+                    <option value="">Pilih negeri</option>
+                    <optgroup label="Semenanjung Malaysia (pos RM8)">${opt(WEST)}</optgroup>
+                    <optgroup label="Malaysia Timur (pos RM15)">${opt(EAST)}</optgroup>
+                  </select>
+                  <p class="hint">Pos RM8 ke Semenanjung, RM15 ke Sabah, Sarawak dan Labuan.</p></div>
+              </div>
+            </section>
+
+            ${don ? `<section class="co-sec py-8">${donationNote(t, '<span data-don-post>Kos pos masih dikenakan untuk penghantaran item kepada anda.</span>')}</section>` : ''}
+
+            <section class="co-sec py-8" aria-labelledby="h-kaedah">
+              ${h2('h-kaedah', 'Kaedah pembayaran')}
+              <p class="meta mt-2">Dikuasakan oleh Bayarcash (demo). Anda akan dibawa ke halaman bayaran Bayarcash yang selamat untuk memilih bank, kad atau QR.</p>
+              <fieldset class="mt-5 grid gap-2">
+                <legend class="sr-only">Pilih kaedah pembayaran</legend>
+                ${CHANNELS.map((c, i) => radioRow('method', c.id, c.name, c.meta, c.code, i === 0)).join('')}
+              </fieldset>
+              <p class="meta mt-5">Dengan menekan Bayar, anda bersetuju bahawa bidaan yang menang adalah muktamad dan tidak boleh dibatalkan.${don ? ' Bayaran direkodkan sebagai sumbangan kepada penerima yang dinyatakan.' : ''}</p>
+            </section>
+          </div>
+
+          <aside class="tile order-first lg:order-none lg:sticky lg:top-24 px-5 py-6 sm:px-7 sm:py-7" aria-labelledby="h-ringkasan">
+            <h2 id="h-ringkasan" class="font-serif text-[22px] md:text-[24px] font-normal leading-tight text-ink">Ringkasan</h2>
+            <div class="mt-5 flex gap-4">
+              <img src="${U.itemImage(item)}" alt="" class="h-[75px] w-[60px] rounded-lg object-cover bg-[var(--surface)] shrink-0">
+              <div class="min-w-0">
+                <div class="lot">${U.lotNo(item)}</div>
+                <div class="lot-title mt-0.5 text-[17px] text-ink">${U.esc(item.title)}</div>
+                <div class="meta mt-0.5">${U.esc(item.category)} · Saiz ${U.esc(item.size)} · ${U.esc(item.condition)}</div>
+              </div>
+            </div>
+            <dl class="mt-6 space-y-3 text-[15px]">
+              <div class="flex justify-between gap-4"><dt class="text-ink-2">${don ? 'Sumbangan (bidaan menang)' : 'Harga bidaan menang'}</dt><dd class="tabular-nums text-ink whitespace-nowrap">${U.money(o.amount)}</dd></div>
+              <div class="flex justify-between gap-4"><dt class="text-ink-2"><span data-ship-l>Pos</span> <span data-zone class="text-muted"></span></dt><dd data-ship class="whitespace-nowrap">Pilih negeri</dd></div>
+              <div class="flex justify-between gap-4"><dt class="text-ink-2">Yuran penyertaan</dt><dd class="text-muted text-right">Dibayar semasa bida</dd></div>
+            </dl>
+            <div class="mt-5 pt-5 border-t flex justify-between items-baseline gap-4" style="border-top-color:var(--line-strong)">
+              <span class="text-[16px] text-ink">Jumlah</span>
+              <span class="price text-[30px] text-ink whitespace-nowrap" data-total>${U.money(o.amount)}</span>
+            </div>
+            <div class="hidden mt-6 lg:block">
+              <button type="submit" data-pay class="btn btn-brand btn-lg w-full">Bayar <span class="tabular-nums" data-total-btn>${U.money(o.amount)}</span></button>
+            </div>
+          </aside>
+          <div class="co-bar no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white lg:hidden">
+            <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
+              <div class="min-w-0 flex-1"><div class="text-[14px] leading-tight text-muted">Jumlah perlu dibayar</div><div class="price mt-0.5 whitespace-nowrap text-[24px] text-ink" data-total-bar>${U.money(o.amount)}</div></div>
+              <button type="submit" data-pay class="btn btn-brand shrink-0 !min-h-[52px] px-8">Bayar</button>
+            </div>
+          </div>
+        </form>`;
+    }
+
+    const POST_FIELDS = ['alamat', 'poskod', 'bandar', 'negeri'];
+
+    function bindForm(o, item, t) {
+      const f = document.getElementById('co');
+      const ff = fulfilOf(t);
+      const don = isDonation(t);
+      const val = n => (f.elements[n] ? String(f.elements[n].value || '').trim() : '');
+      const radio = n => (f.querySelector(`input[name=${n}]:checked`) || {}).value;
+      const method = () => radio('method') || 'fpx';
+      const mode = () => (ff ? radio('fulfil') || ff.def : 'post');
+      const ship = () => (mode() === 'pickup' ? 0 : postageFor(val('negeri')));
+
+      // restore what the buyer typed before going to Bayarcash
+      const d = draft.get();
+      if (d) {
+        ['nama', 'tel', 'alamat', 'poskod', 'bandar', 'negeri'].forEach(n => { if (d[n] != null && f.elements[n]) f.elements[n].value = d[n]; });
+        const pick = (n, v) => { const r = v && f.querySelector(`input[name=${n}][value="${v}"]`); if (r) r.checked = true; };
+        if (ff) pick('fulfil', d.fulfil);
+        pick('method', d.method);
+      }
+
+      function updateTotals() {
+        const pickup = mode() === 'pickup';
+        const negeri = val('negeri');
+        const s = ship();
+        const total = o.amount + s;
+        const shipEl = f.querySelector('[data-ship]');
+        const known = pickup || !!negeri;
+        shipEl.textContent = known ? U.money(s) : 'Pilih negeri';
+        shipEl.className = 'whitespace-nowrap ' + (known ? 'tabular-nums text-ink' : 'text-muted');
+        f.querySelector('[data-ship-l]').textContent = pickup ? 'Ambil sendiri' : 'Pos';
+        f.querySelector('[data-zone]').textContent = pickup ? '(tiada pos)' : negeri ? '· ' + zoneOf(negeri) : '';
+        f.querySelectorAll('[data-total],[data-total-btn],[data-total-bar]').forEach(el => el.textContent = U.money(total));
+      }
+      function showMode() {
+        const pickup = mode() === 'pickup';
+        f.querySelectorAll('[data-post-only]').forEach(el => el.classList.toggle('hidden', pickup));
+        f.querySelectorAll('[data-pickup-only]').forEach(el => el.classList.toggle('hidden', !pickup));
+        f.querySelector('[data-recip-title]').textContent = pickup ? 'Maklumat pengambil' : 'Alamat penghantaran';
+        f.querySelector('[data-nama-label]').textContent = pickup ? 'Nama pengambil' : 'Nama penerima';
+        const dp = f.querySelector('[data-don-post]');
+        if (dp) dp.textContent = pickup ? 'Tiada kos pos: item diambil sendiri semasa majlis.' : 'Kos pos masih dikenakan untuk penghantaran item kepada anda.';
+        if (pickup) POST_FIELDS.forEach(n => setErr(n, ''));
+        updateTotals();
+      }
+      f.elements.negeri.addEventListener('change', updateTotals);
+      f.querySelectorAll('input[name=fulfil]').forEach(r => r.addEventListener('change', showMode));
+      f.elements.poskod.addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 5); });
+
+      function setErr(name, msg) {
+        const el = f.elements[name];
+        if (msg) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid');
+        let e = el.parentElement.querySelector('.field-error[data-for]');
+        if (msg) {
+          if (!e) { e = document.createElement('div'); e.className = 'field-error'; e.dataset.for = name; e.id = 'err-' + name; el.parentElement.insertBefore(e, el.parentElement.querySelector('.hint')); el.setAttribute('aria-describedby', e.id); }
+          e.textContent = msg;
+        } else if (e) { e.remove(); el.removeAttribute('aria-describedby'); }
+        return !msg;
+      }
+      ['nama', 'tel', 'alamat', 'poskod', 'bandar', 'negeri'].forEach(n => f.elements[n].addEventListener('input', () => setErr(n, '')));
+      f.elements.negeri.addEventListener('change', () => setErr('negeri', ''));
+      showMode();
+
+      function validate() {
+        let ok = true;
+        const chk = (n, cond, msg) => { if (!setErr(n, cond ? '' : msg)) ok = false; };
+        const pickup = mode() === 'pickup';
+        chk('nama', val('nama').length >= 3, pickup ? 'Sila isi nama pengambil seperti dalam kad pengenalan.' : 'Sila isi nama penerima.');
+        chk('tel', /^\+?\d{9,12}$/.test(val('tel').replace(/[\s-]/g, '')), 'No. telefon tidak sah. Contoh: 012-345 6789.');
+        if (!pickup) {
+          chk('alamat', val('alamat').length >= 8, 'Sila isi alamat penuh (no. rumah dan jalan).');
+          chk('poskod', /^\d{5}$/.test(val('poskod')), 'Poskod mesti 5 digit.');
+          chk('bandar', val('bandar').length >= 2, 'Sila isi bandar.');
+          chk('negeri', !!val('negeri'), 'Sila pilih negeri untuk mengira kos pos.');
+        }
+        return ok;
+      }
+
+      let busy = false;
+      f.addEventListener('submit', e => {
+        e.preventDefault();
+        if (busy) return;
+        const cur = EB.store.get().orders.find(x => x.id === o.id);
+        if (!cur || cur.status !== 'unpaid') { lastKey = null; render(); return; }
+        if (Date.now() > cur.dueAt) { U.toast('Tempoh bayaran telah tamat.', 'error'); lastKey = null; render(); return; }
+        if (!validate()) {
+          U.toast('Sila betulkan maklumat yang ditanda.', 'error');
+          const bad = f.querySelector('[aria-invalid="true"]');
+          if (bad) { bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); bad.focus({ preventScroll: true }); }
+          return;
+        }
+        const pickup = mode() === 'pickup';
+        const negeri = pickup ? null : val('negeri');
+        const shipping = ship();
+        const total = o.amount + shipping;
+        const recipient = { name: val('nama'), phone: val('tel') };
+        const address = pickup
+          ? `${ff.pickupLabel}: ${recipient.name}, ${recipient.phone}`
+          : `${recipient.name} (${recipient.phone})\n${val('alamat')}\n${val('poskod')} ${val('bandar')}, ${negeri}`;
+        const fulfilment = pickup ? 'pickup' : 'post';
+        const shipZone = pickup ? null : zoneOf(negeri);
+
+        // keep the form for a failed / cancelled return
+        draft.set({ fulfil: fulfilment, method: method(), nama: val('nama'), tel: val('tel'), alamat: val('alamat'), poskod: val('poskod'), bandar: val('bandar'), negeri: val('negeri') });
+        // the order carries the delivery choice even if the buyer never comes back to this page
+        EB.store.update(s => {
+          const x = s.orders.find(y => y.id === o.id);
+          if (x && x.status === 'unpaid') { x.fulfilment = fulfilment; x.shipping = shipping; x.total = total; x.shipZone = shipZone; x.shipState = negeri; x.recipient = recipient; }
+        });
+
+        busy = true;
+        notice = null;
+        f.querySelectorAll('[data-pay]').forEach(b => { b.disabled = true; b.setAttribute('aria-busy', 'true'); b.textContent = 'Membuka Bayarcash…'; });
+        setTimeout(() => {
+          EB.pay.start({
+            kind: 'order', tenant: t.slug, itemId: item.id, orderId: o.id,
+            amount: total,
+            description: 'Invois ' + o.id,
+            channel: method(),
+            customer: { name: recipient.name, phone: recipient.phone, email: (EB.auth.user() || {}).email || '' },
+            meta: { address, fulfilment, shipping, shipZone, shipState: negeri, recipient },
+            returnUrl: U.link('checkout.html', { order: o.id }),
+          });
+        }, 450);
+      });
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+      const user = EB.auth.user();
+      if (!user) {
+        if (lastKey === 'login') return; lastKey = 'login';
+        app.innerHTML = shell('Log masuk untuk membayar', 'Log masuk dengan akaun yang membuat bidaan untuk membayar invois anda.', `<a href="${U.link('login.html', { next: location.pathname + location.search + location.hash })}" class="btn btn-brand btn-lg w-full sm:w-auto">Log masuk</a>`);
+        return;
+      }
+      const s = EB.store.get();
+      const o = orderId && s.orders.find(x => x.id === orderId);
+      const key = user.id + ':' + (o ? o.id + ':' + o.status + ':' + (o.dueAt < Date.now()) : 'none');
+      if (key === lastKey) return; // nothing relevant changed (bots bidding elsewhere)
+      lastKey = key;
+
+      if (!o) { app.innerHTML = shell('Invois tidak dijumpai', 'Pautan pembayaran ini tidak sah atau telah dipadam. Semak invois anda di Bidaan saya.', backBtn); return; }
+      if (o.tenant !== EB.tenant.slug()) { location.replace(U.link('checkout.html', { order: o.id, shop: o.tenant })); return; }
+      if (o.userId !== user.id) { app.innerHTML = shell('Invois ini bukan milik anda', 'Invois ini milik pembida lain. Sila semak akaun yang anda gunakan.', backBtn); return; }
+      const item = s.items.find(i => i.id === o.itemId);
+      const t = EB.tenant.current();
+      if (!item) { app.innerHTML = shell('Item tidak dijumpai', 'Item untuk invois ini tidak lagi wujud. Sila hubungi kedai.', backBtn); return; }
+
+      if (o.status === 'paid') {
+        draft.clear();
+        app.innerHTML = (receipt === o.id ? '' : `<p class="no-print max-w-2xl mx-auto mb-4 text-[16px] text-muted">Invois ini telah dibayar. Berikut resit anda.</p>`) + receiptView(o, item, t);
+        app.querySelector('[data-print]').onclick = () => window.print();
+        return;
+      }
+      if (o.status === 'passed') {
+        app.innerHTML = shell('Invois telah luput', `Bayaran untuk "${U.esc(item.title)}" tidak diterima dalam tempoh. Item telah ditawarkan kepada pembida seterusnya mengikut peraturan lelongan.`, backBtn + `<a href="${U.link('shop.html')}" class="link-arrow min-h-[44px]">Lihat item lain</a>`);
+        return;
+      }
+      if (Date.now() > o.dueAt) {
+        app.innerHTML = shell('Tempoh bayaran telah tamat', `Tarikh akhir bayaran ialah <span class="tabular-nums">${U.fmtDate(o.dueAt)}</span>. Sila hubungi ${U.esc(t.name)} untuk bantuan.`, backBtn);
+        return;
+      }
+      app.innerHTML = formView(o, item, t);
+      bindForm(o, item, t);
+      U.tickCountdowns();
+    }
+
+    render();
+    EB.store.subscribe(() => render());
+    // re-check when the payment deadline passes while the page is open
+    setInterval(() => { const o = orderId && EB.store.get().orders.find(x => x.id === orderId); if (o && o.status === 'unpaid' && Date.now() > o.dueAt) render(); }, 5000);
+    // back/forward cache: the page may be restored mid "Membuka Bayarcash…"; rebuild it
+    window.addEventListener('pageshow', e => { if (e.persisted) { lastKey = null; render(); } });
+  </script>
+</body>
+</html>

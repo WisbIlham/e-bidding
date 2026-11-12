@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eBid Baju</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js"></script>
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/data.js"></script>
+  <script src="assets/store.js"></script>
+  <script src="assets/auction.js"></script>
+  <script src="assets/ui.js"></script>
+</head>
+<body class="min-h-screen">
+  <div id="eb-header"></div>
+  <main class="max-w-6xl mx-auto px-4 md:px-6 py-8" id="app"></main>
+  <div id="eb-footer"></div>
+  <script>
+    EB.init({ area: 'bidder', active: 'shop', title: 'Utama' });
+    function render() { /* build #app from EB.store.get() */ }
+    render();
+    EB.store.subscribe(render);
+  </script>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Papan pemuka · eBid Baju</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="../assets/tw-config.js"></script>
+  <link rel="stylesheet" href="../assets/app.css">
+  <script src="../assets/data.js"></script>
+  <script src="../assets/store.js"></script>
+  <script src="../assets/auction.js"></script>
+  <script src="../assets/ui.js"></script>
+  <style>
+    /* open tables: first/last cells align with the page edge */
+    .t-open th:first-child, .t-open td:first-child { padding-left: 0; }
+    .t-open th:last-child, .t-open td:last-child { padding-right: 0; }
+    .kpi-v { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 400; letter-spacing: -.02em; line-height: 1; white-space: nowrap;
+      font-size: clamp(24px, 6.4vw, 34px); color: var(--ink); }
+    .ch-grid { stroke: var(--line); stroke-width: 1; stroke-opacity: .7; }
+    .ch-base { stroke: var(--ink); stroke-width: 1; }
+    .ch-ax { fill: var(--muted); font: 400 12px var(--font); font-variant-numeric: tabular-nums; }
+    .ch-ax.is-today { fill: var(--ink); font-weight: 500; }
+    .ch-bar { fill: #b9babe; }
+    .ch-bar.is-today { fill: var(--ink); }
+    .ch-bar.is-hover { fill: var(--ink-2); }
+    .ch-bar.is-today.is-hover { fill: var(--ink); }
+    .ch-hit { fill: transparent; }
+    /* ---------- Mod skrin besar (projector view for the dinner) ----------
+     * Dark, calm, readable from the back of the hall. Barlow only; numbers tabular.
+     * The shop's accent colour is used for the price and nothing else; brand colour only on the logo mark. */
+    .stage { position: fixed; inset: 0; z-index: 95; display: flex; flex-direction: column; overflow: auto;
+      background: #0b0c0e; color: #f4f4f5; font-family: var(--font); font-variant-numeric: tabular-nums; }
+    .stage[hidden] { display: none; }
+    .stage :focus-visible { outline: 2px solid #f4f4f5; outline-offset: 3px; }
+    .stage-top { display: flex; align-items: center; gap: 14px; padding: 14px clamp(16px, 3vw, 48px); border-bottom: 1px solid rgba(244,244,245,.12); }
+    .stage-mark { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 8px; background: var(--brand); color: #fff;
+      font: 500 13px/1 var(--font); letter-spacing: .04em; }
+    .stage-btn { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: 0 1rem; border: 1px solid rgba(244,244,245,.4); border-radius: 8px;
+      color: #f4f4f5; font-size: 15px; font-weight: 400; background: transparent; cursor: pointer; white-space: nowrap; }
+    .stage-btn:hover { background: rgba(244,244,245,.08); border-color: rgba(244,244,245,.7); }
+    .stage-sel { min-height: 44px; max-width: 34vw; border: 1px solid rgba(244,244,245,.4); border-radius: 8px; background: #0b0c0e; color: #f4f4f5; padding: 0 .7rem; font: 400 15px var(--font); }
+    .stage-body { flex: 1; display: grid; grid-template-columns: minmax(0, 34fr) minmax(0, 66fr); gap: clamp(20px, 4vw, 80px);
+      align-items: center; padding: clamp(16px, 3vh, 40px) clamp(16px, 4vw, 72px); }
+    .stage-photo { width: 100%; max-height: calc(100vh - 220px); aspect-ratio: 4 / 5; object-fit: cover; border-radius: 8px; background: #1a1b1e; justify-self: center; }
+    .stage-info { min-width: 0; container-type: inline-size; }
+    .stage-k { font-size: clamp(14px, 1.25vw, 22px); font-weight: 400; color: rgba(244,244,245,.6); }
+    .stage-lot { font-size: clamp(14px, 1.25vw, 22px); color: rgba(244,244,245,.6); letter-spacing: .02em; }
+    .stage-title { font-family: var(--font-display); font-weight: 400; line-height: 1.12; letter-spacing: -.01em; color: #fff;
+      font-size: clamp(26px, min(3.6vw, 5vh), 68px); text-wrap: balance;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .stage-price { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 300; letter-spacing: -.035em; line-height: .95;
+      color: var(--accent); font-size: clamp(44px, 9vw, 180px); font-size: clamp(44px, min(14cqi, 14vh), 200px); white-space: nowrap; }
+    .stage-lead { font-size: clamp(18px, min(2vw, 2.9vh), 36px); font-weight: 300; color: rgba(244,244,245,.82); }
+    .stage-lead b { font-weight: 500; color: #fff; }
+    .stage-stats { display: grid; grid-template-columns: repeat(3, max-content); justify-content: start; column-gap: clamp(24px, 5cqi, 80px); row-gap: 12px;
+      border-top: 1px solid rgba(244,244,245,.14); padding-top: clamp(10px, 1.6vh, 24px); }
+    .stage-v { font-weight: 300; line-height: 1.1; white-space: nowrap; letter-spacing: -.01em;
+      font-size: clamp(22px, min(5.4cqi, 5.4vh), 72px); color: #fff; }
+    .stage-v.is-soon { color: #ff8a7a; }
+    .stage-bids { border-top: 1px solid rgba(244,244,245,.14); }
+    .stage-bids li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: clamp(12px, 2cqi, 32px); align-items: baseline;
+      padding: clamp(4px, .7vh, 10px) 0; border-bottom: 1px solid rgba(244,244,245,.08);
+      font-size: clamp(15px, min(1.5vw, 2.2vh), 26px); font-weight: 300; color: rgba(244,244,245,.62); }
+    .stage-bids li:first-child { color: #fff; font-weight: 400; }
+    .stage-bids .amt { text-align: right; }
+    .stage-foot { display: flex; flex-wrap: wrap; gap: 6px 24px; padding: 14px clamp(16px, 3vw, 48px); border-top: 1px solid rgba(244,244,245,.12);
+      font-size: clamp(13px, 1.1vw, 19px); color: rgba(244,244,245,.6); }
+    .stage-foot b { color: #fff; font-weight: 500; }
+    .stage-dot { display: inline-block; width: .55em; height: .55em; border-radius: 50%; background: #e5483a; margin-right: .45em; vertical-align: .08em; animation: pulse 1.6s ease-in-out infinite; }
+    .stage-dot.off { background: rgba(244,244,245,.4); animation: none; }
+    .stage-new { animation: stageNew 1.6s ease-out; }
+    @keyframes stageNew { 0% { background: rgba(244,244,245,.12); } 100% { background: transparent; } }
+    @media (max-width: 767px) {
+      .stage-body { grid-template-columns: minmax(0, 1fr); align-items: start; }
+      .stage-photo { max-height: 38vh; width: auto; }
+      .stage-price { font-size: clamp(44px, 17cqi, 84px); }
+      .stage-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stage-sel { max-width: 40vw; }
+    }
+    @media (prefers-reduced-motion: reduce) { .stage-new, .stage-dot { animation: none !important; } }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div id="eb-header"></div>
+  <main class="max-w-6xl mx-auto px-4 md:px-6 pt-10 pb-8 sm:pt-14" id="app">
+    <!-- page head -->
+    <div class="flex flex-col gap-5 sm:flex-row sm:items-end mb-8 sm:mb-10">
+      <div class="min-w-0">
+        <h1 class="font-serif text-[36px] sm:text-[40px] font-normal leading-[1.1] tracking-[-0.01em] text-ink">Papan pemuka</h1>
+        <p class="mt-2 text-[16px] text-muted" id="sub"></p>
+      </div>
+      <div class="sm:ml-auto grid grid-cols-[minmax(0,1fr)_auto] sm:flex gap-2">
+        <button type="button" id="btn-stage" class="btn btn-outline" aria-haspopup="dialog" title="Paparan untuk projektor di majlis: gambar, bidaan tertinggi dan masa, dikemas kini secara langsung">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="8.5" rx="1"/><path d="M5.5 14h5M8 11.25V14"/></svg>Mod skrin besar</button>
+        <a id="btn-add" class="btn btn-brand" href="#">Tambah item</a>
+      </div>
+    </div>
+
+    <!-- KPI strip: one grey tile -->
+    <section id="kpis" aria-label="Ringkasan" class="tile grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-7 sm:gap-x-10 sm:gap-y-9 px-5 py-6 sm:px-8 sm:py-8 mb-14 sm:mb-20"></section>
+
+    <!-- live + feed -->
+    <section class="grid lg:grid-cols-3 gap-x-10 gap-y-14 mb-14 sm:mb-20">
+      <div class="lg:col-span-2 min-w-0">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Sedang dilelong</h2>
+          <span id="live-count" class="tabular-nums text-[14px] text-muted"></span>
+          <a id="lnk-items" class="link-arrow ml-auto text-[15px]" href="#">Urus item</a>
+        </div>
+        <div id="live-table" class="border-t border-ink"></div>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-baseline gap-3 mb-4">
+          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Bidaan terkini</h2>
+          <span class="text-[14px] text-muted">15 terakhir</span>
+        </div>
+        <ul id="feed" class="divide-line border-t border-ink max-h-[480px] overflow-y-auto"></ul>
+      </div>
+    </section>
+
+    <!-- chart + rules -->
+    <section class="grid lg:grid-cols-3 gap-x-10 gap-y-14">
+      <div class="lg:col-span-2 min-w-0">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Yuran penyertaan</h2>
+          <span class="text-[14px] text-muted">14 hari lepas dan hari ini</span>
+          <span id="chart-total" class="ml-auto tabular-nums text-[18px] text-ink"></span>
+        </div>
+        <div class="border-t border-ink pt-3">
+          <p id="chart-read" class="text-[14px] text-muted min-h-[22px]" aria-live="polite"></p>
+          <div id="chart" class="mt-3"></div>
+        </div>
+      </div>
+      <div class="min-w-0" id="rules"></div>
+    </section>
+  </main>
+  <div id="eb-footer"></div>
+
+  <script>
+    EB.init({ area: 'admin', active: 'index', title: 'Papan pemuka' });
+    const { esc, money, link, timeAgo, fmtDate, itemImage, lotNo, toast } = EB.ui;
+    const A = EB.auction;
+    const slug = EB.tenant.slug();
+
+    /* ---------- Tutup bidaan sekarang (local helper; the same code lives in admin/index.html and admin/items.html) ----------
+     * The engine (EB.auction closeDue, every 1s in the leader tab) does the real closing: winner, invoice, inbox.
+     * We only move endAt into the past and wait for item.result to appear. */
+    function toastLink(msg, href, label, type) {
+      let box = document.getElementById('eb-toasts');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'eb-toasts';
+        box.className = 'fixed z-[100] bottom-4 right-4 left-4 sm:left-auto flex flex-col gap-2 items-stretch sm:items-end pointer-events-none';
+        document.body.appendChild(box);
+      }
+      const bar = { success: 'border-l-4 border-l-[var(--ok)]', warn: 'border-l-4 border-l-[var(--warn)]', error: 'border-l-4 border-l-[var(--live)]' }[type] || '';
+      const el = document.createElement('div');
+      el.className = `eb-toast pointer-events-auto ${bar} bg-[var(--ink)] text-white text-[15px] rounded-lg shadow-lg px-4 py-3 sm:max-w-sm`;
+      el.setAttribute('role', 'status');
+      el.textContent = msg + ' ';
+      if (href) {
+        const a = document.createElement('a');
+        a.href = href; a.textContent = label || 'Lihat';
+        a.className = 'font-medium text-white underline underline-offset-2 whitespace-nowrap';
+        el.appendChild(a);
+      }
+      box.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 8600);
+      setTimeout(() => el.remove(), 9000);
+    }
+
+    function closeHead(item) {
+      return `<div class="flex gap-3 items-start pb-3 mb-4 border-b border-line"><img src="${esc(EB.ui.itemImage(item))}" class="h-16 w-[52px] rounded object-cover shrink-0 bg-paper" alt="">
+        <div class="min-w-0"><div class="lot">${esc(EB.ui.lotNo(item))}</div><div class="font-serif text-[18px] font-normal text-ink leading-snug">${esc(item.title)}</div></div></div>`;
+    }
+
+    /** Opens the confirm modal. With no bids it explains why and offers "Tamatkan tanpa pemenang". */
+    function askCloseNow(itemId) {
+      const s = EB.store.get();
+      const item = s.items.find(i => i.id === itemId);
+      if (!item || A.status(item) !== 'live') { EB.ui.toast('Lelongan ini tidak lagi berlangsung.', 'warn'); return; }
+      const lot = EB.ui.lotNo(item);
+      const h = A.highest(itemId, s);
+      if (!h) {
+        EB.ui.modal({
+          title: 'Belum ada bidaan',
+          body: closeHead(item) + `<p class="text-[14px]">"Tutup bidaan sekarang" tidak tersedia kerana belum ada sesiapa membida item ini, jadi tiada pemenang untuk dipilih.</p>
+            <p class="mt-3 text-[14px] text-muted">Anda boleh tamatkan lelongan tanpa pemenang. Item akan disenaraikan sebagai "Tiada bidaan" di Pemenang & bayaran dan boleh dilelong semula. Tindakan ini tidak boleh dibatalkan.</p>`,
+          actions: [{ label: 'Batal' }, { label: 'Tamatkan tanpa pemenang', danger: true, onClick: () => endNow(itemId) }],
+        });
+        return;
+      }
+      let wrap = null, done = false;
+      EB.ui.modal({
+        title: 'Tutup bidaan sekarang?',
+        body: closeHead(item) + `<p class="text-[14px] leading-relaxed">Bidaan tertinggi semasa
+            <b data-cn-amt class="tabular-nums font-medium text-ink whitespace-nowrap">${money(h.amount)}</b> oleh <b data-cn-name class="font-medium text-ink">${esc(EB.users.byId(h.userId).name)}</b> akan menjadi pemenang.
+            Tindakan ini tidak boleh dibatalkan.</p>
+          <p class="mt-3 text-[13px] text-muted">Invois dihantar kepada pemenang serta-merta dengan tempoh bayaran ${A.tenantOf(item).settings.payDeadlineHours} jam. Pembida lain dimaklumkan melalui peti masuk.</p>
+          <p data-cn-note class="hidden mt-3 text-[13px] text-ink-2 border-l-2 border-[var(--warn)] bg-[var(--warn-soft)] px-3 py-2 rounded-r">Bidaan baharu masuk semasa tetingkap ini dibuka. Pemenang dan amaun di atas telah dikemas kini.</p>`,
+        actions: [{ label: 'Batal' }, { label: 'Tutup bidaan', danger: true, onClick: () => { done = true; endNow(itemId); } }],
+        onOpen: el => { wrap = el; },
+      });
+      // keep the named winner honest while the modal is open (bots may still bid)
+      let lastId = h.id;
+      const unsub = EB.store.subscribe(() => {
+        if (done || !wrap || !document.body.contains(wrap)) { setTimeout(unsub, 0); return; }
+        const s2 = EB.store.get();
+        const it2 = s2.items.find(i => i.id === itemId);
+        if (!it2 || A.status(it2) !== 'live') { wrap.remove(); setTimeout(unsub, 0); EB.ui.toast('Lelongan ini sudah tamat.', 'warn'); return; }
+        const h2 = A.highest(itemId, s2);
+        if (!h2 || h2.id === lastId) return;
+        lastId = h2.id;
+        wrap.querySelector('[data-cn-amt]').textContent = money(h2.amount);
+        wrap.querySelector('[data-cn-name]').textContent = EB.users.byId(h2.userId).name;
+        wrap.querySelector('[data-cn-note]').classList.remove('hidden');
+      });
+    }
+
+    /** Move endAt into the past; the engine closes the item within ~1s. Then report the winner. */
+    function endNow(itemId) {
+      const it = EB.store.get().items.find(i => i.id === itemId);
+      if (!it || A.status(it) !== 'live') { EB.ui.toast('Lelongan ini tidak lagi berlangsung.', 'warn'); return; }
+      const now = Date.now();
+      A.updateItem(itemId, { endAt: now - 1, closedEarlyBy: 'admin', closedEarlyAt: now });
+      const winners = EB.ui.link('admin/winners.html');
+      const t0 = Date.now();
+      const poll = setInterval(() => {
+        const x = EB.store.get().items.find(i => i.id === itemId);
+        if (x && x.result) {
+          clearInterval(poll);
+          if (x.result.winnerId) toastLink('Bidaan ditutup. Pemenang: ' + EB.users.byId(x.result.winnerId).name + ' (' + money(x.result.amount) + ').', winners, 'Lihat pemenang & bayaran', 'success');
+          else toastLink('Lelongan ditamatkan tanpa pemenang.', winners, 'Lihat pemenang & bayaran', 'success');
+        } else if (Date.now() - t0 > 8000) {
+          clearInterval(poll);
+          toastLink('Bidaan ditutup, tetapi pemenang belum diproses. Muat semula halaman ini.', winners, 'Pemenang & bayaran', 'warn');
+        }
+      }, 250);
+    }
+
+    document.getElementById('btn-add').href = link('admin/items.html', { new: 1 });
+    const btnShop = document.getElementById('btn-shop');   // header already links to the shop
+    if (btnShop) btnShop.href = link('shop.html');
+    document.getElementById('lnk-items').href = link('admin/items.html');
+
+    function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+    const clock = ts => new Date(ts).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    function kpi(label, value, sub) {
+      return `<div class="min-w-0">
+        <div class="eyebrow">${label}</div>
+        <div class="kpi-v mt-2">${value}</div>
+        <div class="mt-2 text-[13px] leading-snug text-muted">${sub}</div></div>`;
+    }
+
+    const prevTop = {};      // itemId -> last highest amount (for flash)
+    let lastFeedId = null;
+
+    function render() {
+      const s = EB.store.get();
+      const t = s.tenants.find(x => x.slug === slug);
+      const now = Date.now();
+      const today = startOfToday();
+      const items = s.items.filter(i => i.tenant === slug);
+      const bids = s.bids.filter(b => b.tenant === slug);
+      const fees = s.fees.filter(f => f.tenant === slug);
+      const orders = s.orders.filter(o => o.tenant === slug);
+      const live = items.filter(i => A.status(i, now) === 'live').sort((a, b) => a.endAt - b.endAt);
+      const upcoming = items.filter(i => A.status(i, now) === 'upcoming');
+      const bidsToday = bids.filter(b => b.at >= today);
+      const bidders = new Set(bids.map(b => b.userId));
+      const biddersToday = new Set(bidsToday.map(b => b.userId));
+      // include the older fee history so this matches the chart total + super admin
+      const hist = s.feeHistory.filter(h => h.tenant === slug);
+      const feeSum = fees.reduce((a, f) => a + f.amount, 0) + hist.reduce((a, h) => a + h.amount, 0);
+      const feeCount = fees.length + hist.reduce((a, h) => a + h.count, 0);
+      const feeToday = fees.filter(f => f.at >= today);
+      const topSum = live.reduce((a, i) => { const h = A.highest(i.id, s); return a + (h ? h.amount : 0); }, 0);
+      const paid = orders.filter(o => o.status === 'paid');
+      const unpaid = orders.filter(o => o.status === 'unpaid');
+      const paidSum = paid.reduce((a, o) => a + o.amount, 0);
+
+      document.getElementById('sub').textContent = t.name + ' · ' + new Date().toLocaleDateString('ms-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' · dikemas kini setiap bidaan';
+
+      document.getElementById('kpis').innerHTML = [
+        kpi('Sedang dilelong', live.length, `${upcoming.length} akan datang · ${items.length} item`),
+        kpi('Bidaan hari ini', bidsToday.length.toLocaleString('en-MY'), `${bids.length.toLocaleString('en-MY')} sejak mula`),
+        kpi('Pembida unik', bidders.size, `${biddersToday.size} aktif hari ini`),
+        kpi('Hasil yuran', money(feeSum), `${feeCount.toLocaleString('en-MY')} bayaran · ${feeToday.length} hari ini`),
+        kpi('Nilai bidaan semasa', money(topSum), `Tertinggi bagi ${live.length} item aktif`),
+        kpi('Jualan dibayar', money(paidSum), `${paid.length} dibayar · ${unpaid.length} belum bayar`),
+      ].join('');
+
+      renderLive(s, t, live, now);
+      renderFeed(s, bids);
+      renderChart(s, t, fees, today);
+      renderRules(t);
+    }
+
+    function renderLive(s, t, live, now) {
+      document.getElementById('live-count').textContent = live.length + ' item';
+      const box = document.getElementById('live-table');
+      if (!live.length) {
+        box.innerHTML = `<div class="py-12"><p class="text-[16px] text-ink-2">Tiada lelongan sedang berlangsung.</p>
+          <a class="link-arrow mt-3 text-[15px]" href="${link('admin/items.html', { new: 1 })}">Tambah item</a></div>`;
+        return;
+      }
+      // compute once per item (flash/bump state), then draw a table (tablet/desktop) and a stacked list (phones)
+      const rows = live.map(i => {
+        const all = A.bidsFor(i.id, s);
+        const h = all[0];
+        const changed = prevTop[i.id] !== undefined && h && prevTop[i.id] !== h.amount;
+        prevTop[i.id] = h ? h.amount : 0;
+        return { i, all, h, tier: EB.tenant.tier(t, i.tier), last: A.isLastWindow(i, s, now), changed };
+      });
+      const lastTag = r => r.last ? `<span class="status status-live mt-1">${t.settings.lastWindowMin} min akhir · ×${t.settings.lastWindowMultiplier}</span>` : '';
+      const who = r => r.h ? esc(EB.users.byId(r.h.userId).name) + ' · ' + r.all.length + ' bidaan' : 'Mula ' + money(r.i.startPrice);
+      const amt = r => r.h ? money(r.h.amount) : '<span class="text-[14px] text-muted">Tiada bidaan</span>';
+      const closeBtn = (r, cls) => r.h
+        ? `<button type="button" class="btn btn-outline ${cls}" data-close="${esc(r.i.id)}" title="Tamatkan lelongan sekarang; pembida tertinggi menjadi pemenang">Tutup bidaan</button>`
+        : `<button type="button" class="btn btn-outline ${cls} opacity-50" data-close="${esc(r.i.id)}" aria-disabled="true" title="Tidak tersedia: belum ada bidaan. Klik untuk tamatkan tanpa pemenang.">Tutup bidaan</button>`;
+      box.innerHTML = `<table class="table t-open hidden sm:table">
+        <thead><tr><th>Item</th>
+          <th class="num">Tertinggi</th><th class="num">Baki masa</th><th class="num"><span class="sr-only">Tindakan</span></th></tr></thead>
+        <tbody>${rows.map(r => `<tr class="${r.changed ? 'flash' : ''}">
+            <td><a href="${link('item.html', { id: r.i.id })}" target="_blank" rel="noopener" class="flex items-center gap-4 min-w-0 group">
+              <img src="${esc(itemImage(r.i))}" class="h-14 w-11 rounded object-cover shrink-0 bg-tile" alt="">
+              <span class="min-w-0"><span class="lot block">${esc(lotNo(r.i))}</span>
+              <span class="block font-serif text-[17px] leading-snug text-ink truncate max-w-[240px] group-hover:underline underline-offset-4 decoration-1">${esc(r.i.title)}</span>
+              <span class="block text-[13px] text-muted">Tier ${esc(r.tier.name)}</span>${lastTag(r)}</span></a></td>
+            <td class="num"><div class="tabular-nums text-[18px] text-ink whitespace-nowrap ${r.changed ? 'bump inline-block' : ''}">${amt(r)}</div>
+              <div class="text-[13px] text-muted whitespace-nowrap">${who(r)}</div></td>
+            <td class="num whitespace-nowrap"><span class="tabular-nums ${r.last ? 'text-[var(--live)]' : 'text-ink'}" data-countdown-end="${r.i.endAt}">${EB.ui.countdown(r.i.endAt - now)}</span></td>
+            <td class="text-right whitespace-nowrap">${closeBtn(r, 'btn-sm')}</td>
+          </tr>`).join('')}</tbody></table>
+        <ul class="sm:hidden divide-line">${rows.map(r => `<li class="py-5 ${r.changed ? 'flash' : ''}">
+            <a href="${link('item.html', { id: r.i.id })}" target="_blank" rel="noopener" class="flex gap-4 min-w-0">
+              <img src="${esc(itemImage(r.i))}" class="h-[88px] w-[70px] rounded object-cover shrink-0 bg-tile" alt="">
+              <span class="min-w-0 flex-1"><span class="lot block">${esc(lotNo(r.i))}</span>
+                <span class="block font-serif text-[18px] leading-snug text-ink line-clamp-2">${esc(r.i.title)}</span>${lastTag(r)}</span></a>
+            <dl class="mt-4 grid grid-cols-2 gap-3">
+              <div><dt class="text-[13px] text-muted">Tertinggi</dt><dd class="tabular-nums text-[22px] leading-tight text-ink whitespace-nowrap ${r.changed ? 'bump' : ''}">${amt(r)}</dd>
+                <dd class="text-[13px] text-muted truncate">${who(r)}</dd></div>
+              <div><dt class="text-[13px] text-muted">Baki masa</dt><dd class="tabular-nums text-[22px] leading-tight ${r.last ? 'text-[var(--live)]' : 'text-ink'}" data-countdown-end="${r.i.endAt}">${EB.ui.countdown(r.i.endAt - now)}</dd></div>
+            </dl>
+            <div class="mt-4">${closeBtn(r, 'w-full')}</div></li>`).join('')}</ul>`;
+    }
+
+    document.getElementById('live-table').addEventListener('click', e => {
+      const b = e.target.closest('[data-close]');
+      if (b) askCloseNow(b.dataset.close);
+    });
+
+    function renderFeed(s, bids) {
+      const list = bids.slice().sort((a, b) => b.at - a.at).slice(0, 15);
+      const box = document.getElementById('feed');
+      if (!list.length) { box.innerHTML = '<li class="py-10 text-[15px] text-ink-2">Belum ada bidaan. Bidaan baharu akan muncul di sini serta-merta.</li>'; return; }
+      const newestPrev = lastFeedId;
+      lastFeedId = list[0].id;
+      let fresh = newestPrev !== null;
+      box.innerHTML = list.map(b => {
+        const u = EB.users.byId(b.userId);
+        const it = s.items.find(i => i.id === b.itemId) || { title: '(item dipadam)' };
+        const isNew = fresh && b.id !== newestPrev;
+        if (b.id === newestPrev) fresh = false;
+        return `<li class="flex items-start gap-3 py-3 ${isNew ? 'flash' : ''}">
+          <span class="tabular-nums text-[13px] text-muted pt-0.5 w-11 shrink-0" title="${esc(timeAgo(b.at))}">${clock(b.at)}</span>
+          <div class="min-w-0 flex-1"><div class="text-[15px] text-ink truncate">${esc(u.name)}</div>
+          <div class="text-[13px] text-muted truncate">${esc(it.title)}</div></div>
+          <div class="tabular-nums text-[15px] text-ink whitespace-nowrap">${money(b.amount)}</div></li>`;
+      }).join('');
+    }
+
+    /* ---------- fee chart: one series, inline SVG, brand only for today ---------- */
+    let chartKey = '';
+    let chartDays = [];
+    const fmtAx = v => v >= 1000 ? (v / 1000) + 'k' : String(v);
+
+    function readout(i) {
+      const d = chartDays[i];
+      if (!d) return;
+      document.getElementById('chart-read').innerHTML = `<span class="text-ink-2">${esc(d.label)}</span> · <span class="tabular-nums text-ink">${money(d.amount)}</span> · <span class="tabular-nums">${d.count}</span> bayaran`;
+      document.querySelectorAll('#chart .ch-bar').forEach(b => b.classList.toggle('is-hover', +b.dataset.b === i && i !== chartDays.length - 1));
+    }
+
+    function renderChart(s, t, fees, today) {
+      const hist = s.feeHistory.filter(h => h.tenant === slug);
+      const days = [];
+      for (let d = 14; d >= 1; d--) {
+        const date = new Date(today - d * 86400000 + 12 * 3600000);
+        const key = date.toISOString().slice(0, 10);
+        const h = hist.find(x => x.day === key);
+        days.push({ label: date.toLocaleDateString('ms-MY', { day: 'numeric', month: 'short' }), short: String(date.getDate()), amount: h ? h.amount : 0, count: h ? h.count : 0, today: false });
+      }
+      const tf = fees.filter(f => f.at >= today);
+      days.push({ label: 'Hari ini', short: 'Kini', amount: tf.reduce((a, f) => a + f.amount, 0), count: tf.length, today: true });
+      const total = days.reduce((a, d) => a + d.amount, 0);
+      document.getElementById('chart-total').textContent = money(total);
+
+      const box = document.getElementById('chart');
+      const W = Math.max(280, box.clientWidth || 600);
+      const key = JSON.stringify([W, days.map(d => [d.amount, d.count])]);
+      if (key === chartKey) return;
+      chartKey = key;
+      chartDays = days;
+
+      const H = 200, ml = 40, mr = 2, mt = 8, mb = 24, pw = W - ml - mr, ph = H - mt - mb;
+      const max = Math.max(10, ...days.map(d => d.amount));
+      const step = [10, 20, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000].find(x => max / x <= 4) || 20000;
+      const top = Math.ceil(max / step) * step;
+      const y = v => mt + ph - (v / top) * ph;
+      const band = pw / days.length;
+      const bw = Math.max(4, Math.min(26, band * 0.6));
+      let g = '';
+      for (let v = 0; v <= top; v += step) {
+        g += `<line class="${v ? 'ch-grid' : 'ch-base'}" x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}"/>
+          <text class="ch-ax" x="${ml - 8}" y="${y(v) + 4}" text-anchor="end">${fmtAx(v)}</text>`;
+      }
+      days.forEach((d, i) => {
+        const cx = ml + band * i + band / 2, x = cx - bw / 2, h = (d.amount / top) * ph, yy = mt + ph - h, base = mt + ph;
+        if (h > 0) {
+          const r = Math.min(2, h);
+          g += `<path class="ch-bar${d.today ? ' is-today' : ''}" data-b="${i}" d="M${x},${base} V${yy + r} Q${x},${yy} ${x + r},${yy} H${x + bw - r} Q${x + bw},${yy} ${x + bw},${yy + r} V${base} Z"/>`;
+        }
+        const show = band >= 24 || (days.length - 1 - i) % 2 === 0;
+        if (show) g += `<text class="ch-ax${d.today ? ' is-today' : ''}" x="${cx}" y="${H - 6}" text-anchor="middle">${esc(d.short)}</text>`;
+        g += `<rect class="ch-hit" data-i="${i}" x="${ml + band * i}" y="${mt}" width="${band}" height="${ph + mb}"/>`;
+      });
+      box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Carta bar yuran penyertaan harian, 14 hari lepas dan hari ini" style="display:block;max-width:100%">${g}</svg>`;
+      readout(days.length - 1);
+      if (!total) document.getElementById('chart-read').textContent = 'Belum ada bayaran yuran dalam 15 hari ini. Bayaran muncul sebaik pembida menyertai lelongan.';
+    }
+
+    const chartEl = document.getElementById('chart');
+    chartEl.addEventListener('mouseover', e => { const h = e.target.closest && e.target.closest('.ch-hit'); if (h) readout(+h.dataset.i); });
+    chartEl.addEventListener('click', e => { const h = e.target.closest && e.target.closest('.ch-hit'); if (h) readout(+h.dataset.i); });
+    chartEl.addEventListener('mouseleave', () => readout(chartDays.length - 1));
+    let rz = 0;
+    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { chartKey = ''; render(); }, 150); });
+
+    let rulesKey = '';
+    function renderRules(t) {
+      const st = t.settings;
+      const key = JSON.stringify([st, t.tiers]);
+      if (key === rulesKey) return;
+      rulesKey = key;
+      const row = (k, v) => `<div class="flex items-baseline justify-between gap-3 py-3"><dt class="text-[15px] text-ink-2">${k}</dt><dd class="tabular-nums text-[15px] text-ink text-right">${v}</dd></div>`;
+      document.getElementById('rules').innerHTML = `
+        <div class="flex items-baseline gap-3 mb-4">
+          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Peraturan kedai</h2>
+          <a href="${link('admin/settings.html')}" class="link-arrow ml-auto text-[15px]">Ubah</a>
+        </div>
+        <div class="border-t border-ink">
+          <dl class="divide-line">
+            ${row('Yuran penyertaan', money(st.fee))}
+            ${row('Had menang / pembida', st.winLimit ? st.winLimit + ' item' : 'Tiada had')}
+            ${row('Tempoh bayaran', st.payDeadlineHours + ' jam')}
+            ${row('Kenaikan minit akhir', st.lastWindowOn ? '×' + st.lastWindowMultiplier + ' · ' + st.lastWindowMin + ' min' : 'Tutup')}
+          </dl>
+          <div class="border-t border-line mt-0">
+            <table class="table t-open">
+              <thead><tr><th>Tier</th><th class="num">Minima</th><th class="num">Kenaikan</th></tr></thead>
+              <tbody>${t.tiers.map(x => `<tr><td class="text-ink">${esc(x.name)}</td><td class="num tabular-nums whitespace-nowrap">${money(x.minPrice)}</td><td class="num tabular-nums whitespace-nowrap">${money(x.increment)}</td></tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+
+    /* ---------- Mod skrin besar: full-screen projector view (lives in this page only) ---------- */
+    const Stage = (() => {
+      let el = null, itemId = null, unsub = null, tick = 0, wentFull = false, lastTopId, lastBidIds = [], opener = null;
+      const clockS = ts => new Date(ts).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const mask = id => EB.ui.maskName(EB.users.byId(id).name);
+
+      function pick(s) {
+        const items = s.items.filter(i => i.tenant === slug);
+        const now = Date.now();
+        const cur = items.find(i => i.id === itemId);
+        if (cur) return cur;
+        const live = items.filter(i => A.status(i, now) === 'live').sort((a, b) => a.endAt - b.endAt);
+        if (live.length) return live[0];
+        const ended = items.filter(i => A.status(i, now) === 'ended').sort((a, b) => b.endAt - a.endAt);
+        return ended[0] || items[0] || null;
+      }
+
+      function build() {
+        el = document.createElement('div');
+        el.className = 'stage';
+        el.setAttribute('role', 'dialog');
+        el.setAttribute('aria-modal', 'true');
+        el.setAttribute('aria-label', 'Mod skrin besar');
+        el.hidden = true;
+        el.innerHTML = `
+          <div class="stage-top">
+            <span class="stage-mark" data-s="mark"></span>
+            <div class="min-w-0"><div class="font-medium leading-tight truncate text-[clamp(15px,1.3vw,22px)]" data-s="shop"></div>
+              <div class="leading-tight truncate text-[clamp(12px,1vw,16px)] text-[rgba(244,244,245,.6)]" data-s="event"></div></div>
+            <div class="ml-auto flex items-center gap-2">
+              <label class="sr-only" for="stage-item">Pilih item</label><select id="stage-item" class="stage-sel" data-s="pick" hidden></select>
+              <button type="button" class="stage-btn" data-s="close" aria-label="Keluar mod skrin besar (Esc)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>Keluar<span class="hidden sm:inline text-[13px] opacity-60">Esc</span></button>
+            </div>
+          </div>
+          <div class="stage-body" data-s="body"></div>
+          <div class="stage-foot" data-s="foot"></div>`;
+        document.body.appendChild(el);
+        el.querySelector('[data-s="close"]').onclick = close;
+        el.querySelector('[data-s="pick"]').onchange = e => { itemId = e.target.value; lastTopId = undefined; lastBidIds = []; paint(true); };
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && el && !el.hidden && !document.querySelector('.eb-modal')) { e.preventDefault(); close(); } });
+        const onFs = () => {
+          const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+          if (fsEl === el) wentFull = true;
+          else if (wentFull && !el.hidden) { wentFull = false; close(); }   // Esc in full screen exits both
+        };
+        document.addEventListener('fullscreenchange', onFs);
+        document.addEventListener('webkitfullscreenchange', onFs);
+      }
+
+      function open() {
+        if (!el) build();
+        const s = EB.store.get();
+        const it = pick(s);
+        if (!it) { toast('Tiada item untuk dipaparkan. Tambah item dahulu.', 'warn'); return; }
+        itemId = it.id; lastTopId = undefined; lastBidIds = [];
+        opener = document.activeElement;
+        el.hidden = false;
+        document.documentElement.style.overflow = 'hidden';
+        paint(true);
+        const req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req) { try { const p = req.call(el); if (p && p.catch) p.catch(() => {}); } catch (e) { /* overlay only */ } }
+        el.querySelector('[data-s="close"]').focus({ preventScroll: true });
+        unsub = EB.store.subscribe(() => paint(false));
+        tick = setInterval(() => paint(false), 1000);
+      }
+
+      function close() {
+        if (!el || el.hidden) return;
+        el.hidden = true;
+        document.documentElement.style.overflow = '';
+        if (unsub) { const u = unsub; unsub = null; setTimeout(u, 0); }
+        clearInterval(tick);
+        const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fsEl) { wentFull = false; const ex = document.exitFullscreen || document.webkitExitFullscreen; try { const p = ex.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
+        if (opener && opener.focus) opener.focus({ preventScroll: true });
+      }
+
+      function paint(full) {
+        if (!el || el.hidden) return;
+        const s = EB.store.get();
+        const t = s.tenants.find(x => x.slug === slug);
+        const it = pick(s);
+        if (!it) { close(); return; }
+        itemId = it.id;
+        const now = Date.now();
+        const st = A.status(it, now);
+        const all = A.bidsFor(it.id, s);
+        const h = all[0];
+        const recent = s.bids.filter(b => b.itemId === it.id).sort((a, b) => b.at - a.at).slice(0, 5);
+        const left = it.endAt - now;
+        const $ = k => el.querySelector(`[data-s="${k}"]`);
+
+        if (full) {
+          $('mark').textContent = t.logoText || '';
+          $('shop').textContent = t.name;
+          $('event').textContent = t.event || t.tagline || '';
+          const items = s.items.filter(i => i.tenant === slug);
+          const sel = $('pick');
+          sel.hidden = items.length < 2;
+          sel.innerHTML = items.map(i => `<option value="${esc(i.id)}" ${i.id === it.id ? 'selected' : ''}>${esc(lotNo(i))} · ${esc(i.title.slice(0, 40))}</option>`).join('');
+          $('body').innerHTML = `
+            <img class="stage-photo" data-s="img" alt="">
+            <div class="stage-info">
+              <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1"><span class="stage-lot" data-s="lot"></span><span class="stage-k" data-s="state"></span></div>
+              <h2 class="stage-title mt-[1.2vh]" data-s="title"></h2>
+              <div class="stage-k mt-[2.4vh]" data-s="plabel"></div>
+              <div class="stage-price mt-[1vh]" data-s="price" aria-live="polite"></div>
+              <div class="stage-lead mt-[1.4vh]" data-s="lead"></div>
+              <div class="stage-stats mt-[2.4vh]">
+                <div><div class="stage-k" data-s="tlabel">Baki masa</div><div class="stage-v mt-1" data-s="clock"></div></div>
+                <div><div class="stage-k">Jumlah bidaan</div><div class="stage-v mt-1" data-s="count"></div></div>
+                <div data-s="nextbox"><div class="stage-k">Bidaan seterusnya</div><div class="stage-v mt-1" data-s="next"></div></div>
+              </div>
+              <div class="mt-[2.4vh]"><div class="stage-k mb-[.6vh]">Bidaan terkini</div><ul class="stage-bids" data-s="bids"></ul></div>
+            </div>`;
+          $('img').src = EB.ui.itemImage(it);
+          $('lot').textContent = lotNo(it);
+          $('title').textContent = it.title;
+          const dom = t.domain ? `Bida melalui telefon: <b>${esc(t.domain)}</b>` : '';
+          $('foot').innerHTML = [dom, t.beneficiary ? `<span class="min-w-0">${esc(t.beneficiary)}</span>` : ''].filter(Boolean).join('');
+        }
+
+        // state line
+        const stateTxt = st === 'live' ? (A.isLastWindow(it, s, now) ? 'Langsung · minit akhir' : 'Langsung') : st === 'upcoming' ? 'Akan bermula' : 'Bidaan ditutup';
+        $('state').innerHTML = `<span class="stage-dot ${st === 'live' ? '' : 'off'}" aria-hidden="true"></span>${stateTxt}`;
+
+        // price + leader
+        const ended = st === 'ended';
+        const winnerId = it.result ? it.result.winnerId : (h ? h.userId : null);
+        $('plabel').textContent = ended ? (winnerId ? 'Harga menang' : 'Harga mula') : h ? 'Bidaan tertinggi' : 'Harga mula';
+        const priceEl = $('price');
+        const amt = ended && it.result && it.result.winnerId ? it.result.amount : h ? h.amount : it.startPrice;
+        const topId = h ? h.id : null;
+        if (priceEl.textContent !== money(amt)) {
+          priceEl.textContent = money(amt);
+          if (!full && lastTopId !== undefined && topId !== lastTopId) { priceEl.classList.remove('bump'); void priceEl.offsetWidth; priceEl.classList.add('bump'); }
+        }
+        lastTopId = topId;
+        $('lead').innerHTML = ended
+          ? (winnerId ? `Pemenang: <b>${esc(mask(winnerId))}</b>` : 'Lelongan tamat tanpa bidaan.')
+          : h ? `Pembida tertinggi: <b>${esc(mask(h.userId))}</b>` : 'Belum ada bidaan. Jadilah pembida pertama.';
+
+        // stats
+        $('tlabel').textContent = st === 'upcoming' ? 'Mula dalam' : 'Baki masa';
+        const clk = $('clock');
+        clk.textContent = st === 'upcoming' ? EB.ui.countdown(it.startAt - now) : EB.ui.countdown(left);
+        clk.classList.toggle('is-soon', st === 'live' && left < 5 * 60000);
+        $('count').textContent = all.length.toLocaleString('en-MY');
+        $('nextbox').hidden = ended;
+        if (!ended) $('next').textContent = money(A.minNextBid(it, s));
+
+        // latest 5 bids (newest first)
+        const ids = recent.map(b => b.id);
+        if (full || ids.join() !== lastBidIds.join()) {
+          const fresh = full ? [] : ids.filter(id => !lastBidIds.includes(id));
+          $('bids').innerHTML = recent.length
+            ? recent.map(b => `<li class="${fresh.includes(b.id) ? 'stage-new' : ''}"><span>${esc(clockS(b.at))}</span><span class="truncate">${esc(mask(b.userId))}</span><span class="amt">${money(b.amount)}</span></li>`).join('')
+            : `<li class="!grid-cols-1 !font-normal"><span>${ended ? 'Tiada bidaan direkodkan untuk lot ini.' : 'Bidaan akan dipaparkan di sini sebaik diterima.'}</span></li>`;
+          lastBidIds = ids;
+        }
+      }
+
+      return { open, close };
+    })();
+    document.getElementById('btn-stage').onclick = () => Stage.open();
+
+    let raf = 0;
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); };
+    render();
+    EB.store.subscribe(schedule);
+    setInterval(schedule, 5000);
+  </script>
+</body>
+</html>

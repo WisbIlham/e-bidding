@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Internet Banking (Sandbox)</title>
+  <style>
+    /* Mock FPX bank (sandbox). Plain "bank" look, its own CSS. */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: #f2f4f7; color: #1f2933; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; font-size: 15px; line-height: 1.45; overflow-x: hidden; }
+    button, input { font: inherit; }
+    .sbx { background: #ffc107; color: #3d2c00; text-align: center; font-size: 12.5px; font-weight: 700; padding: 5px 12px; }
+    .bar { background: var(--bank, #1f3a68); color: #fff; }
+    .bar-in { max-width: 760px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+    .bar-logo { width: 38px; height: 38px; border-radius: 6px; background: rgba(255,255,255,.16); display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: none; }
+    .bar-name { font-weight: 700; font-size: 17px; line-height: 1.2; }
+    .bar-sub { font-size: 12.5px; opacity: .8; }
+    .bar-fpx { margin-left: auto; font-size: 12px; border: 1px solid rgba(255,255,255,.4); border-radius: 3px; padding: 2px 6px; white-space: nowrap; }
+    .wrap { max-width: 520px; margin: 24px auto 32px; padding: 0 16px; }
+    .panel { background: #fff; border: 1px solid #d5dbe3; border-radius: 6px; padding: 22px; }
+    h1 { font-size: 19px; margin: 0 0 4px; }
+    .muted { color: #5f6b7a; font-size: 13.5px; margin: 0 0 16px; }
+    .pay-sum { background: #f6f8fb; border: 1px solid #e3e8ef; border-radius: 4px; padding: 10px 12px; font-size: 14px; margin-bottom: 18px; }
+    .pay-sum b { font-variant-numeric: tabular-nums; }
+    label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .input { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font-size: 16px; border: 1px solid #b8c2cf; border-radius: 4px; background: #fff; color: #1f2933; }
+    .input:focus { outline: 0; border-color: var(--bank, #1f3a68); box-shadow: 0 0 0 3px rgba(31,58,104,.18); }
+    .field { margin-bottom: 14px; }
+    .note { background: #fff8e1; border: 1px solid #ffe08a; color: #6b5200; border-radius: 4px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 16px; }
+    .err { color: #c62828; font-size: 13.5px; margin: 0 0 12px; }
+    .err[hidden] { display: none; }
+    .btns { display: flex; gap: 10px; margin-top: 6px; }
+    .btn { flex: 1; min-height: 46px; border-radius: 4px; border: 1px solid transparent; font-weight: 700; font-size: 15.5px; cursor: pointer; padding: 10px 14px; }
+    .btn-p { background: var(--bank, #1f3a68); color: #fff; }
+    .btn-p:hover { filter: brightness(1.1); }
+    .btn-o { background: #fff; color: #1f2933; border-color: #b8c2cf; }
+    .btn-o:hover { background: #f2f4f7; }
+    .btn-r { background: #fff; color: #c62828; border-color: #e3a3a3; }
+    .btn-r:hover { background: #fdf0f0; }
+    .btn:disabled { opacity: .6; cursor: default; }
+    table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin-bottom: 18px; }
+    th, td { text-align: left; padding: 9px 0; border-bottom: 1px solid #e3e8ef; vertical-align: top; }
+    th { color: #5f6b7a; font-weight: 400; width: 42%; padding-right: 10px; }
+    td { font-weight: 700; overflow-wrap: anywhere; }
+    .amt { font-size: 18px; }
+    .q { font-size: 17px; font-weight: 700; margin: 0 0 14px; }
+    .center { text-align: center; padding: 18px 0; }
+    .spin { width: 32px; height: 32px; border: 3px solid #dfe4ea; border-top-color: var(--bank, #1f3a68); border-radius: 50%; margin: 0 auto 12px; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+    .foot { text-align: center; color: #8592a3; font-size: 12px; margin-top: 14px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 480px) {
+      .wrap { margin: 14px auto 24px; padding: 0 12px; }
+      .panel { padding: 16px; }
+      .bar-fpx { display: none; }
+      .btns { flex-direction: column-reverse; }
+    }
+  </style>
+  <script src="../assets/data.js"></script>
+  <script src="../assets/store.js"></script>
+  <script src="../assets/auction.js"></script>
+  <script src="../assets/ui.js"></script>
+  <script src="../assets/pay.js"></script>
+</head>
+<body>
+  <div class="sbx" role="note">SANDBOX / DEMO MODE: tiada wang sebenar</div>
+  <header class="bar"><div class="bar-in">
+    <span class="bar-logo" id="b-logo">SBI</span>
+    <div><div class="bar-name" id="b-name">Bank</div><div class="bar-sub">Internet Banking</div></div>
+    <span class="bar-fpx">FPX Payment</span>
+  </div></header>
+
+  <main class="wrap">
+    <!-- step 1: login -->
+    <section class="panel" id="s-login" hidden>
+      <h1>Log in to pay</h1>
+      <p class="muted">You were redirected here by FPX to authorise a payment.</p>
+      <div class="pay-sum" id="sum1"></div>
+      <div class="note">Sandbox login: username <b>1234</b>, password <b>1234</b> (already filled in).</div>
+      <form id="login" novalidate>
+        <div class="field"><label for="u">Username</label><input class="input" id="u" value="1234" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+        <div class="field"><label for="p">Password</label><input class="input" id="p" type="password" value="1234" autocomplete="off"></div>
+        <p class="err" id="login-err" hidden>Invalid username or password. Sandbox login is 1234 / 1234.</p>
+        <div class="btns">
+          <button type="button" class="btn btn-o" id="cancel1">Cancel</button>
+          <button type="submit" class="btn btn-p">Log in</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- step 2: approve -->
+    <section class="panel" id="s-approve" hidden>
+      <p class="q" id="q"></p>
+      <table id="tbl"></table>
+      <div class="btns">
+        <button type="button" class="btn btn-r" id="reject">Reject</button>
+        <button type="button" class="btn btn-p" id="approve">Approve</button>
+      </div>
+    </section>
+
+    <!-- step 3: processing -->
+    <section class="panel center" id="s-proc" hidden role="status" aria-live="polite">
+      <div class="spin"></div>
+      <b id="proc-t">Processing your payment…</b>
+      <p class="muted" style="margin:6px 0 0">Please wait. You will be returned to the payment gateway.</p>
+    </section>
+
+    <section class="panel" id="s-bad" hidden>
+      <h1>Session not found</h1>
+      <p class="muted" style="margin:0">This FPX session is invalid or has already been used. Please start the payment again from the merchant.</p>
+    </section>
+
+    <p class="foot">Mock bank for the eBid Baju sandbox. Not a real bank. No real login or money.</p>
+  </main>
+
+  <script>
+  (function () {
+    const P = EB.pay;
+    const esc = EB.ui.esc;
+    const q = new URLSearchParams(location.search);
+    const it = P.get(q.get('intent'));
+    const bank = q.get('bank') || 'SBI Bank A';
+    const show = id => ['s-login', 's-approve', 's-proc', 's-bad'].forEach(s => { document.getElementById(s).hidden = s !== id; });
+
+    const SANDBOX = { 'SBI Bank A': 'success', 'SBI Bank B': 'failed', 'SBI Bank C': 'random' };
+    const isSandbox = bank in SANDBOX;
+    const label = bank + ' (Sandbox)';
+    document.getElementById('b-name').textContent = label;
+    document.getElementById('b-logo').textContent = isSandbox ? 'SBI' : bank.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+    // a plain colour per bank (not real branding)
+    const hues = { 'SBI Bank A': '#1f3a68', 'SBI Bank B': '#5b2a86', 'SBI Bank C': '#0f5e5a' };
+    let h = 0; for (let i = 0; i < bank.length; i++) h = (h * 31 + bank.charCodeAt(i)) % 360;
+    document.documentElement.style.setProperty('--bank', hues[bank] || `hsl(${h} 45% 30%)`);
+    document.title = label + ' · Internet Banking';
+
+    if (!it || it.status !== 'pending') {
+      show('s-bad');
+      if (it) setTimeout(() => location.replace(P.pageUrl('status.html', it)), 1200);
+      return;
+    }
+
+    const m = it.merchant || {};
+    const amt = P.myr(it.amount);
+    document.getElementById('sum1').innerHTML = `Paying <b>${esc(amt)}</b> to <b>${esc(m.name)}</b><br>Ref: ${esc(it.orderNo)}`;
+    document.getElementById('q').textContent = `Approve payment of ${amt} to ${m.name}?`;
+    document.getElementById('tbl').innerHTML = [
+      ['From account', 'Savings Account ••••1234 (Sandbox)'],
+      ['Pay to', m.name],
+      ['Reference', it.orderNo],
+      ['Payment via', 'FPX (Bayarcash)'],
+      ['Amount', `<span class="amt">${esc(amt)}</span>`],
+    ].map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${k === 'Amount' ? v : esc(v)}</td></tr>`).join('');
+
+    function finish(status, text) {
+      show('s-proc');
+      document.getElementById('proc-t').textContent = text;
+      document.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      P.authorize(it.id, { status, bank });
+      setTimeout(() => location.replace(P.pageUrl('status.html', it)), 1100);
+    }
+
+    document.getElementById('login').onsubmit = e => {
+      e.preventDefault();
+      const ok = document.getElementById('u').value.trim() === '1234' && document.getElementById('p').value === '1234';
+      document.getElementById('login-err').hidden = ok;
+      if (ok) { show('s-approve'); document.getElementById('approve').focus(); }
+    };
+    document.getElementById('cancel1').onclick = () => finish('cancelled', 'Cancelling payment…');
+    document.getElementById('reject').onclick = () => finish('cancelled', 'Payment rejected. Returning…');
+    document.getElementById('approve').onclick = () => {
+      const rule = SANDBOX[bank] || 'success'; // real bank names: always success in the demo
+      const status = rule === 'random' ? (Math.random() < 0.5 ? 'success' : 'failed') : rule;
+      finish(status, 'Processing your payment…');
+    };
+
+    show('s-login');
+  })();
+  </script>
+</body>
+</html>

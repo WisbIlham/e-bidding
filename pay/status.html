@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Transaction Status · Bayarcash (Sandbox)</title>
+  <link rel="stylesheet" href="bayarcash.css">
+  <script src="../assets/data.js"></script>
+  <script src="../assets/store.js"></script>
+  <script src="../assets/auction.js"></script>
+  <script src="../assets/ui.js"></script>
+  <script src="../assets/pay.js"></script>
+</head>
+<body>
+  <div class="sbx" role="note">SANDBOX / DEMO MODE: tiada wang sebenar</div>
+  <main class="wrap" id="app"></main>
+
+  <script>
+  (function () {
+    const P = EB.pay;
+    const esc = EB.ui.esc;
+    const app = document.getElementById('app');
+    let it = P.get(new URLSearchParams(location.search).get('intent'));
+
+    const FPX_MARK = `<span class="fpx" aria-label="FPX Online Banking Payments" role="img">
+      <span class="fpx-top"><svg width="20" height="22" viewBox="0 0 20 22" aria-hidden="true"><path d="M9 1L1 11l8 10V15L5.5 11 9 7z" fill="#1b75bb"/><path d="M11 1l8 10-8 10V15l3.5-4L11 7z" fill="#1b3a6b"/></svg>FPX</span>
+      <span class="fpx-sub">Online Banking Payments</span></span>`;
+    const DN_MARK = '<span class="mark" role="img" aria-label="DuitNow QR"><span class="mark-dn">DuitNow</span></span>';
+    const CARD_MARK = '<span class="mark" role="img" aria-label="Visa and Mastercard accepted"><span class="mark-card">VISA</span><span class="mark-card mc">Mastercard</span></span>';
+    const ICONS = {
+      success: '<svg class="st-icon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#28a745"/><path d="M19 33l9 9 17-19" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      failed: '<svg class="st-icon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#dc3545"/><path d="M22 22l20 20M42 22L22 42" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>',
+      cancelled: '<svg class="st-icon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#6c757d"/><path d="M20 32h24" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>',
+      pending: '<svg class="st-icon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#ffc107"/><path d="M32 18v15l9 6" fill="none" stroke="#3d2c00" stroke-width="5" stroke-linecap="round"/></svg>',
+    };
+    const TEXT = {
+      success: ['Payment Successful', 'Your payment has been received.'],
+      failed: ['Payment Failed', 'Your payment was not successful. No money was deducted.'],
+      cancelled: ['Payment Cancelled', 'The payment was cancelled.'],
+      pending: ['Payment Pending', 'We have not received a response from your bank yet.'],
+    };
+
+    if (!it) {
+      app.innerHTML = `<div class="card"><div class="card-h"><h1>Transaction Status</h1></div>
+        <div class="card-b"><p style="margin:0">Transaction not found.</p></div><div class="card-f"><p>Secured by Bayarcash (Sandbox)</p>${FPX_MARK}</div></div>`;
+      return;
+    }
+
+    // Record the result BEFORE showing it, so the merchant state is updated even if this tab is closed.
+    if (it.status === 'pending' && it.auth) it = P.complete(it.id, it.auth);
+
+    const st = it.status;
+    const [title, sub] = TEXT[st] || TEXT.pending;
+    const m = it.merchant || {};
+    const when = new Date(it.completedAt || it.createdAt).toLocaleString('en-MY', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const channel = it.channel === 'fpx' ? (it.bank ? 'FPX - ' + it.bank : 'FPX Online Banking') : P.methodLabel(it, it.bank);
+    const rows = [
+      ['Transaction ID', it.ref || '-'], ['Order Number', it.orderNo], ['Amount', P.myr(it.amount)],
+      ['Bank / Channel', channel], ['Date & Time', when], ['Merchant', m.name],
+    ];
+    const note = st === 'success' && it.effect && !it.effect.ok && it.kind === 'order'
+      ? '<p class="err" style="text-align:center">Payment received, but the merchant could not update this invoice automatically. Please contact the merchant.</p>' : '';
+
+    document.title = title + ' · Bayarcash (Sandbox)';
+    const back = st === 'pending' ? P.pageUrl('bayarcash.html', it) : P.returnHref(it, st);
+
+    app.innerHTML = `
+      <div class="card">
+        <div class="card-h"><h1>Transaction Status</h1></div>
+        <div class="card-b">
+          <div class="st-box">
+            <div class="st-head" role="status">
+              ${ICONS[st] || ICONS.pending}
+              <h2>${title}</h2>
+              <p class="st-amt">${esc(P.myr(it.amount))}</p>
+              <p>${sub}</p>
+            </div>
+            <h2 class="sec">Transaction Details</h2>
+            <dl class="kv">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v || '-')}</dd></div>`).join('')}</dl>
+            ${note}
+            <div class="st-actions">
+              <a class="btn-go" id="back" href="${esc(back)}" style="text-decoration:none">${st === 'pending' ? 'Back to payment' : 'Return to merchant'}</a>
+              ${st === 'pending' ? '' : `<p class="st-redirect" id="redir" aria-live="polite">Redirecting to the merchant in <b id="secs">5</b> seconds. <button type="button" id="stay">Stay on this page</button></p>`}
+            </div>
+          </div>
+        </div>
+        <div class="card-f"><p>Secured by Bayarcash (Sandbox). Keep the Transaction ID for your reference.</p>${it.channel === 'duitnow' ? DN_MARK : it.channel === 'card' ? CARD_MARK : FPX_MARK}</div>
+      </div>`;
+
+    if (st === 'pending') return;
+    let left = 5;
+    const t = setInterval(() => {
+      left--;
+      const s = document.getElementById('secs');
+      if (s) s.textContent = String(Math.max(0, left));
+      if (left <= 0) { clearInterval(t); location.replace(back); }
+    }, 1000);
+    document.getElementById('stay').onclick = () => {
+      clearInterval(t);
+      document.getElementById('redir').textContent = 'Auto-redirect stopped.';
+    };
+  })();
+  </script>
+</body>
+</html>
