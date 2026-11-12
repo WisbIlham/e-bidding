@@ -17,12 +17,14 @@ at the event.
 
 ## Data
 
-Data is kept outside the web folder, so RunCloud atomic deploys do not wipe it:
-`/home/<user>/ebid-data/` (or the `EBID_DATA` environment variable).
+Data folder: the `EBID_DATA` environment variable, else `/home/<user>/ebid-data/` when PHP is
+allowed to use it, else `.data/` inside the web app. On the RunCloud server PHP is limited to the
+web app folder (open_basedir), so it uses `.data/` (nginx answers 403 for dot-folders).
+**When deploying, never delete `.data/`** (for rsync: `--exclude .data`).
 
 - `state.json`: the auction, including bidder phone numbers (admin only)
 - `pin.txt`: the admin PIN. A random 6-digit PIN is made on the first request. To read or change it:
-  `ssh ebid@<server> 'cat ~/ebid-data/pin.txt'`
+  `ssh ebid@<server> 'cat ~/webapps/e-bidding/.data/pin.txt'`
 - `backups/`: a copy of the state before every reset
 
 ## Run locally

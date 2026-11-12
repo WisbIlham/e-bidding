@@ -5,7 +5,8 @@
  *   DATA_DIR/state.json   full state, incl. bidder phone numbers (admin only)
  *   DATA_DIR/pin.txt      admin PIN (a random 6-digit PIN is created on first run)
  *   DATA_DIR/backups/     copy of the state before every reset
- * DATA_DIR = env EBID_DATA, else /home/<user>/ebid-data (worked out from this file's path).
+ * DATA_DIR = env EBID_DATA, else /home/<user>/ebid-data when PHP may use it, else ./.data
+ * (hidden folder in the web app; nginx blocks dot-folders). Deploys must not delete .data.
  *
  * GET  api.php?v=<version>            -> { ok, same:true } when unchanged, else { ok, state } (public, no phones)
  * POST api.php {action,...}  X-Pin    -> admin actions, returns { ok, state } with phones
@@ -15,13 +16,16 @@ declare(strict_types=1);
 function dataDir(): string {
   $env = getenv('EBID_DATA');
   if ($env) return rtrim($env, '/');
-  if (preg_match('#^(/home/[^/]+)/#', __DIR__, $m)) return $m[1] . '/ebid-data';
-  return dirname(__DIR__) . '/ebid-data';
+  // Prefer /home/<user>/ebid-data, but RunCloud's open_basedir usually limits PHP to the web app
+  // folder, so fall back to a hidden .data folder inside it (nginx answers 403 for dot-folders).
+  if (preg_match('#^(/home/[^/]+)/#', __DIR__, $m) && @is_dir($m[1] . '/ebid-data') && @is_writable($m[1] . '/ebid-data')) return $m[1] . '/ebid-data';
+  return __DIR__ . '/.data';
 }
 $DATA_DIR = dataDir();
 $STATE_FILE = $DATA_DIR . '/state.json';
 $PIN_FILE = $DATA_DIR . '/pin.txt';
 if (!is_dir($DATA_DIR)) @mkdir($DATA_DIR, 0700, true);
+if (!is_file($DATA_DIR . '/.htaccess')) @file_put_contents($DATA_DIR . '/.htaccess', "Require all denied\nDeny from all\n");
 if (!is_file($PIN_FILE)) { @file_put_contents($PIN_FILE, (string) random_int(100000, 999999) . "\n"); @chmod($PIN_FILE, 0600); }
 
 header('Content-Type: application/json; charset=utf-8');
