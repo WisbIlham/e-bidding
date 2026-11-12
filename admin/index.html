@@ -36,14 +36,19 @@
 
   /* layout */
   /* While the shown item is open, the record form comes straight after the summary. */
-  .console { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "sum" "items" "main" "list" "tools"; column-gap: 48px; }
-  .console.is-live { grid-template-areas: "sum" "main" "items" "list" "tools"; }
-  .a-sum { grid-area: sum; } .a-items { grid-area: items; } .a-main { grid-area: main; } .a-list { grid-area: list; } .a-tools { grid-area: tools; }
+  /* Online bids waiting for review jump to just after the summary. */
+  .console { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "sum" "items" "main" "list" "online" "tools"; column-gap: 48px; }
+  .console.is-live { grid-template-areas: "sum" "main" "items" "list" "online" "tools"; }
+  .console.has-new { grid-template-areas: "sum" "online" "items" "main" "list" "tools"; }
+  .console.is-live.has-new { grid-template-areas: "sum" "online" "main" "items" "list" "tools"; }
+  .a-sum { grid-area: sum; } .a-items { grid-area: items; } .a-main { grid-area: main; } .a-list { grid-area: list; } .a-tools { grid-area: tools; } .a-online { grid-area: online; }
+  .a-side { display: contents; }
   @media (min-width: 900px) {
-    .console { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr;
-      grid-template-areas: "sum sum" "items list" "main list" "tools list" ". list"; }
-    .console.is-live { grid-template-areas: "sum sum" "main list" "items list" "tools list" ". list"; }
-    .a-list { border-left: 1px solid var(--line); padding-left: 32px; margin-top: 0; }
+    .console, .console.has-new { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr;
+      grid-template-areas: "sum sum" "items side" "main side" "tools side" ". side"; }
+    .console.is-live, .console.is-live.has-new { grid-template-areas: "sum sum" "main side" "items side" "tools side" ". side"; }
+    .a-side { display: flex; flex-direction: column; grid-area: side; border-left: 1px solid var(--line); padding-left: 32px; min-width: 0; }
+    .console:not(.has-new) .a-online { order: 2; }
   }
 
   /* summary */
@@ -160,6 +165,94 @@
   .toast { position: fixed; left: 50%; top: calc(8px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ink); color: #fff;
     padding: 12px 20px; border-radius: 8px; font-size: 16px; max-width: calc(100% - 32px); z-index: 10; }
   .edit-start { min-height: 44px; padding: 0; border: 0; background: none; font: 500 15px var(--font); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+  /* online bids: summary alert */
+  .pend-alert { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; margin-top: 14px; padding: 8px 16px;
+    border: 0; border-radius: 8px; background: var(--ink); color: #fff; font: 500 16px/1.3 var(--font); text-align: left; cursor: pointer; }
+  .pend-alert:hover { background: var(--ink-2); }
+  .pend-alert .go { flex-shrink: 0; font-weight: 400; color: #c9cacd; }
+  .pend-alert.ping { animation: ping 1.4s ease-out 2; }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(1, 2, 5, .45); } 100% { box-shadow: 0 0 0 12px rgba(1, 2, 5, 0); } }
+
+  /* online bids: panel */
+  .on-state { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 15px; color: var(--ink-2); margin: -4px 0 14px; }
+  .on-state .status { font-size: 15px; }
+  .on-state .status.on { color: var(--ok); }
+  .on-state .status.on::before { background: var(--ok); }
+  .on-warn { font-size: 14px; color: var(--warn); margin: -6px 0 14px; }
+  .pq-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .pq { background: var(--tile); border-radius: 8px; padding: 14px; scroll-margin-top: 12px; }
+  .pq.fresh { box-shadow: inset 3px 0 0 var(--ink); animation: flash 2.4s ease-out; }
+  .pq-top { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 0 14px; align-items: start; }
+  .rc { position: relative; width: 80px; height: 80px; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff; padding: 0; overflow: hidden;
+    cursor: zoom-in; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: 500 14px/1.2 var(--font); color: var(--ink); }
+  .rc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .rc img:not([src]) { display: none; }
+  .rc small { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .rc-pdf { font-family: var(--display); font-size: 22px; letter-spacing: .04em; }
+  .pq-new { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 500; vertical-align: 3px; margin-left: 8px; }
+  .pq-amt { font-family: var(--display); font-size: 34px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .pq-who { font-size: 17px; font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; margin-top: 4px; }
+  .pq-meta { font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .pq-meta a { text-underline-offset: 3px; }
+  .pq-chk { font-size: 15px; margin-top: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .pq-chk.bad { color: var(--warn); font-weight: 500; }
+  .pq .err { margin-top: 8px; }
+  .pq-act { display: flex; gap: 8px; margin-top: 12px; }
+  .pq-act .btn { flex: 1 1 0; min-width: 0; }
+  .pq-rej { margin-top: 12px; background: #fff; border-radius: 8px; padding: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
+  .chips .btn { flex: 1 1 auto; font-size: 15px; }
+  .pq-rej .row .btn { flex: 1 1 120px; }
+  .done { margin-top: 14px; border-top: 1px solid var(--line); }
+  .done summary { font-size: 16px; min-height: 52px; }
+  .dn-list { list-style: none; margin: 0; padding: 0; }
+  .dn { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .dn-l { min-width: 0; }
+  .dn-l b { font-weight: 500; overflow-wrap: anywhere; }
+  .dn-r { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+  .dn-r .amt { font-size: 17px; font-variant-numeric: tabular-nums; }
+  .st-ok { color: var(--ok); font-weight: 500; }
+  .st-no { color: var(--live); font-weight: 500; }
+  .dn .link-btn { min-height: 44px; font-size: 14px; }
+  .pq-wa { margin-top: 8px; width: 100%; }
+  .dn-wa { margin-top: 8px; }
+  .on-notify { background: var(--ok-soft); border-radius: 8px; padding: 14px; margin-bottom: 12px; overflow-wrap: anywhere; }
+  .on-notify p { margin-bottom: 10px; }
+  .on-notify b { font-weight: 500; }
+  .on-notify .row .btn { flex: 1 1 auto; }
+  .on-notify .row .btn:first-child { background: #fff; }
+  .tag-on { display: inline-block; margin-left: 8px; padding: 0 7px; border: 1px solid var(--ink); border-radius: 4px; font-size: 12px; font-weight: 500; line-height: 1.6; vertical-align: 2px; white-space: nowrap; }
+
+  /* receipt viewer */
+  dialog.rv { padding: 0; border: 0; margin: 0; width: 100%; height: 100%; max-width: none; max-height: none; background: #fff; color: var(--ink); }
+  dialog.rv::backdrop { background: rgba(1, 2, 5, .6); }
+  @media (min-width: 700px) { dialog.rv { width: min(960px, calc(100% - 48px)); height: calc(100% - 48px); margin: auto; border-radius: 8px; } }
+  .rv-in { display: flex; flex-direction: column; height: 100%; }
+  .rv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 16px; padding-top: calc(8px + env(safe-area-inset-top)); border-bottom: 1px solid var(--line); }
+  .rv-head div { min-width: 0; }
+  .rv-title { font-weight: 500; font-size: 17px; overflow-wrap: anywhere; }
+  .rv-sub { font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .rv-x { flex-shrink: 0; min-width: 48px; }
+  .rv-body { flex: 1; min-height: 0; background: var(--tile); display: flex; align-items: center; justify-content: center; overflow: auto; padding: 8px; }
+  .rv-body img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; background: #fff; }
+  .rv-body.zoom { align-items: flex-start; justify-content: flex-start; }
+  .rv-body.zoom img { max-width: none; max-height: none; cursor: zoom-out; }
+  .rv-body iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .rv-body p { padding: 16px; text-align: center; }
+  .rv-foot { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+  .rv-foot .btn { flex: 1 1 120px; }
+  .rv-hint { flex: 1 1 100%; font-size: 13px; color: var(--muted); }
+
+  /* settings groups */
+  .grp { font-size: 20px; margin: 28px 0 6px; }
+  .grp-note { font-size: 14px; color: var(--muted); margin-bottom: 14px; }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; cursor: pointer; font-size: 16px; }
+  .switch input { appearance: none; -webkit-appearance: none; flex-shrink: 0; width: 52px; height: 32px; margin: 0; border-radius: 16px; background: var(--line-strong); position: relative; cursor: pointer; transition: background .15s; }
+  .switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .switch input:checked { background: var(--ink); }
+  .switch input:checked::after { transform: translateX(20px); }
+  .switch input:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -205,6 +298,7 @@
           <span id="s-inc"></span>
         </div>
       </div>
+      <button class="pend-alert" id="s-pend" type="button" hidden><span id="s-pend-t"></span><span class="go">Semak →</span></button>
       <div class="sum-foot">
         <div class="sum-links">
           <a href="../skrin.html" target="_blank" rel="noopener">Buka skrin projektor</a>
@@ -408,13 +502,30 @@
       </section>
     </div>
 
-    <!-- bid list -->
-    <div class="a-list">
-      <section class="blk">
-        <div class="list-head"><h2>Senarai bidaan</h2><span class="muted num" id="l-count"></span></div>
-        <ul class="bids" id="list"></ul>
-        <p class="err" id="list-err" role="alert"></p>
-      </section>
+    <div class="a-side">
+      <!-- online bids waiting for the receipt check -->
+      <div class="a-online">
+        <section class="blk" id="on-sec" aria-labelledby="on-h">
+          <div class="list-head"><h2 id="on-h">Bidaan online</h2><span class="muted num" id="on-count" aria-live="polite"></span></div>
+          <div class="on-state" id="on-state"></div>
+          <p class="on-warn" id="on-warn" hidden></p>
+          <div class="on-notify" id="on-notify" role="status" hidden></div>
+          <ul class="pq-list" id="pq"></ul>
+          <details class="done" id="done" hidden>
+            <summary id="done-sum">Sudah disemak</summary>
+            <ul class="dn-list" id="dn"></ul>
+          </details>
+        </section>
+      </div>
+
+      <!-- bid list -->
+      <div class="a-list">
+        <section class="blk">
+          <div class="list-head"><h2>Senarai bidaan</h2><span class="muted num" id="l-count"></span></div>
+          <ul class="bids" id="list"></ul>
+          <p class="err" id="list-err" role="alert"></p>
+        </section>
+      </div>
     </div>
 
     <!-- tools -->
@@ -438,6 +549,23 @@
             </div>
           </div>
           <p class="note" id="t-lock" hidden style="margin:-8px 0 16px">Harga mula dan kenaikan dikunci kerana sudah ada bidaan.</p>
+
+          <h3 class="grp" id="t-grp-online">Bidaan online</h3>
+          <p class="grp-note">Tetamu yang tiada di dewan membayar yuran, kemudian menghantar bidaan dengan resit. Bidaan hanya dipaparkan selepas anda terima.</p>
+          <label class="switch" for="t-online"><span>Terima bidaan online</span><input id="t-online" type="checkbox" role="switch"></label>
+          <div class="field">
+            <label class="f" for="t-deposit">Yuran bidaan online (RM)</label>
+            <input class="in num" id="t-deposit" inputmode="numeric" autocomplete="off" style="max-width:200px">
+            <p class="note">Dibayar oleh setiap pembida online sebelum menghantar bidaan. Isi 0 jika tiada yuran.</p>
+          </div>
+          <div class="field">
+            <label class="f" for="t-wa">No. WhatsApp untuk bantuan</label>
+            <input class="in num" id="t-wa" type="tel" inputmode="tel" maxlength="20" autocomplete="off" placeholder="Contoh: 012-345 6789">
+            <p class="note" id="t-wa-note">Tetamu online nampak "Ada masalah? WhatsApp urus setia". Kosongkan untuk tidak papar.</p>
+          </div>
+
+          <h3 class="grp">Akaun untuk bayaran yuran</h3>
+          <p class="grp-note">Tetamu online membayar yuran ke akaun ini. Akaun yang sama dipaparkan untuk bayaran pemenang.</p>
           <div class="field">
             <label class="f" for="t-bank">Bank</label>
             <input class="in" id="t-bank" maxlength="160" autocomplete="off">
@@ -453,7 +581,7 @@
           <div class="field">
             <label class="f" for="t-note">Nota bayaran</label>
             <textarea class="in" id="t-note" maxlength="160" rows="3"></textarea>
-            <p class="note">Dipaparkan pada skrin projektor semasa pemenang diumumkan, hanya jika diisi. Butiran bayaran sama untuk semua item.</p>
+            <p class="note">Dipaparkan kepada tetamu online dan pada skrin projektor semasa pemenang diumumkan, hanya jika diisi. Butiran bayaran sama untuk semua item.</p>
           </div>
           <button class="btn" id="t-save" type="submit">Simpan tetapan</button>
           <p class="err" id="set-err" role="alert"></p>
@@ -475,6 +603,22 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+<dialog class="rv" id="rv" aria-labelledby="rv-title">
+  <div class="rv-in">
+    <div class="rv-head">
+      <div><div class="rv-title" id="rv-title"></div><div class="rv-sub" id="rv-sub"></div></div>
+      <button class="btn btn-outline btn-sm rv-x" id="rv-x" type="button">Tutup</button>
+    </div>
+    <div class="rv-body" id="rv-body"></div>
+    <div class="rv-foot">
+      <p class="rv-hint" id="rv-hint"></p>
+      <a class="btn btn-outline" id="rv-pdf" target="_blank" rel="noopener" hidden>Buka PDF</a>
+      <button class="btn" id="rv-ok" type="button" hidden>Terima</button>
+      <button class="btn btn-outline" id="rv-no" type="button" hidden>Tolak</button>
+    </div>
+  </div>
+</dialog>
+
 <script src="../assets/lot.js"></script>
 <script src="../assets/live.js"></script>
 <script>
@@ -490,7 +634,11 @@
   let reply = null;          // last full reply of act() (addLot gives newId)
   const ui = { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false,
     autoPhone: '', mine: new Set(), setDirty: false, setLot: null, noticeTimer: null,
-    editLot: null, editDirty: false, delAsk: false, rowErr: null, rowErrTimer: null, flashId: null };
+    editLot: null, editDirty: false, delAsk: false, rowErr: null, rowErrTimer: null, flashId: null,
+    // online bids: seen = ids already known (null until the first state), fresh = id -> arrival time (highlight),
+    // rej = {id, reason, auto} open reject form (auto: 'beaten'|'closed'|'gone' = reason worked out from the state), pqErr = {id, msg}
+    seen: null, fresh: new Map(), rej: null, pqErr: null, approving: null, ping: false, notify: null, notifyTimer: null };
+  const BASE_TITLE = document.title;
   // actions that work on one item; act() sends the shown item's id so a switch on another device can't redirect them
   const ITEM_ACTS = new Set(['open', 'bid', 'undo', 'close', 'reopen', 'paid', 'unpaid', 'settings']);
   const FEATURED_IMG = '../assets/img/nikaziz-vest-hanger.jpg';
@@ -597,7 +745,9 @@
   function logout(msg) {
     pin = ''; S = null; storeClear();
     Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, setDirty: false,
-      setLot: null, editLot: null, editDirty: false, delAsk: false, rowErr: null });
+      setLot: null, editLot: null, editDirty: false, delAsk: false, rowErr: null, seen: null, rej: null, pqErr: null, approving: null, notify: null });
+    ui.fresh.clear(); clearReceipts(); closeViewer();
+    document.title = BASE_TITLE; onHtml = ''; doneHtml = '';
     showGate(msg);
   }
 
@@ -635,9 +785,9 @@
     }
 
     // a bid recorded on another device
-    if (prev && !switched && nl && st.bids.length > prev.bids.length && !ui.mine.has(nl.id)) {
+    if (prev && !switched && nl && st.bids.length > prev.bids.length && !ui.mine.has(nl.id) && !(nl.online && nl.sub && nl.sub === ui.approving)) {
       const n = $('rec-notice');
-      n.textContent = 'Bidaan baharu dari peranti lain: ' + money(nl.amount) + ' oleh ' + nl.name + '.';
+      n.textContent = (nl.online ? 'Bidaan online diterima di peranti lain: ' : 'Bidaan baharu dari peranti lain: ') + money(nl.amount) + ' oleh ' + nl.name + '.';
       n.hidden = false; clearTimeout(ui.noticeTimer); ui.noticeTimer = setTimeout(() => { n.hidden = true; }, 10000);
     }
     // pending confirm is now stale
@@ -650,6 +800,21 @@
     if (st.status !== 'closed') ui.reopenAsk = false;
     if (!st.paid) ui.unpaidAsk = false;
     if (st.bids.length || st.status === 'open') ui.delAsk = false;
+
+    // online bids: notice new arrivals; drop open forms for ones already reviewed (here or elsewhere)
+    const pend = st.pending || [];
+    if (!ui.seen) ui.seen = new Set(pend.map(r => r.id));
+    else for (const r of pend) {
+      if (ui.seen.has(r.id)) continue;
+      ui.seen.add(r.id);
+      if (r.status === 'new') { ui.fresh.set(r.id, Date.now()); ui.ping = true; setTimeout(unfresh, FRESH_MS + 100); }
+    }
+    const isNew = id => pend.some(r => r.id === id && r.status === 'new');
+    if (ui.rej && !isNew(ui.rej.id)) ui.rej = null;
+    if (ui.pqErr && !isNew(ui.pqErr.id)) ui.pqErr = null;
+    for (const id of ui.fresh.keys()) if (!isNew(id)) ui.fresh.delete(id);
+    if (rvId && !pend.some(r => r.id === rvId)) closeViewer();
+    else if (rvId) viewerFoot();
 
     render(!switched && (pl && pl.id) !== (nl && nl.id));
   }
@@ -672,7 +837,7 @@
     if (top) {
       $('s-label').textContent = closed ? 'Pemenang' : 'Bidaan tertinggi';
       $('s-amt').textContent = money(top.amount);
-      $('s-who').innerHTML = esc(top.name) + (top.phone ? ' <span class="ph">· ' + esc(top.phone) + '</span>' : '');
+      $('s-who').innerHTML = esc(top.name) + (top.phone ? ' <span class="ph">· ' + esc(top.phone) + '</span>' : '') + (top.online ? '<span class="tag-on">Online</span>' : '');
     } else {
       $('s-label').textContent = 'Harga mula';
       $('s-amt').textContent = money(st.startPrice);
@@ -736,6 +901,7 @@
     }
 
     renderList(newTop);
+    renderOnline();
     renderItems();
     renderEdit();
     renderSettings();
@@ -808,7 +974,7 @@
     let html = '';
     for (let i = n - 1; i >= 0; i--) {
       const b = st.bids[i], newest = i === n - 1;
-      html += '<li data-id="' + esc(b.id) + '"><div class="bid-row"><div class="who"><b>' + esc(b.name) + '</b>' +
+      html += '<li data-id="' + esc(b.id) + '"><div class="bid-row"><div class="who"><b>' + esc(b.name) + (b.online ? '<span class="tag-on">Online</span>' : '') + '</b>' +
         '<span class="t num">' + (b.phone ? esc(b.phone) + ' · ' : '') + esc(Live.time(b.at)) + '</span></div>' +
         '<div class="bid-right"><span class="amt">' + money(b.amount) + '</span>' +
         (newest && open && ui.undoId !== b.id ? '<button class="btn btn-outline btn-sm" type="button" data-undo="' + esc(b.id) + '">Batal</button>' : '') +
@@ -836,6 +1002,11 @@
     $('t-start').value = S.startPrice; $('t-inc').value = S.increment;
     const p = S.payment || {};
     $('t-bank').value = p.bank || ''; $('t-accname').value = p.accName || ''; $('t-accno').value = p.accNo || ''; $('t-note').value = p.note || '';
+    $('t-online').checked = p.onlineOn !== false;
+    $('t-deposit').value = p.deposit == null ? 10 : p.deposit;
+    $('t-wa').value = p.wa ? '+' + p.wa : '';
+    $('t-wa-note').innerHTML = 'Tetamu online nampak "Ada masalah? WhatsApp urus setia". Kosongkan untuk tidak papar.' +
+      (p.wa ? ' <a href="https://wa.me/' + esc(p.wa) + '" target="_blank" rel="noopener">Uji pautan</a>' : '');
   }
 
   /* ---------- record bid ---------- */
@@ -954,9 +1125,17 @@
 
   /* ---------- settings ---------- */
   $('set-form').addEventListener('input', () => { ui.setDirty = true; });
+  $('set-form').addEventListener('change', () => { ui.setDirty = true; });
   $('set-form').addEventListener('submit', async e => {
     e.preventDefault();
     const body = { action: 'settings', lotId: ui.setLot || S.activeId, bank: $('t-bank').value, accName: $('t-accname').value, accNo: $('t-accno').value, note: $('t-note').value };
+    const dep = $('t-deposit').value.trim();
+    if (!/^\d[\d,]*(\.\d*)?$/.test(dep)) { $('set-err').textContent = 'Masukkan yuran bidaan online dalam RM (isi 0 jika tiada yuran).'; $('t-deposit').focus(); return; }
+    body.deposit = parseAmt(dep);
+    body.onlineOn = $('t-online').checked;
+    const wa = $('t-wa').value.trim(), waDigits = wa.replace(/\D/g, '');
+    if (waDigits && (waDigits.length < 9 || waDigits.length > 15)) { $('set-err').textContent = 'Nombor WhatsApp tidak sah. Contoh: 012-345 6789.'; $('t-wa').focus(); return; }
+    body.wa = wa;
     if (!S.bids.length) {
       const sp = parseAmt($('t-start').value), inc = parseAmt($('t-inc').value);
       if (sp < 1) { $('set-err').textContent = 'Harga mula mesti lebih daripada 0.'; return; }
@@ -1160,23 +1339,32 @@
       if (text && /^[=+\-@\t\r]/.test(s)) s = "'" + s;      // stop spreadsheet formulas
       return '"' + s.replace(/"/g, '""') + '"';
     };
-    const ph = p => cell(p, /^[=\-@]/.test(p || ''));
+    const ph = p => cell(p, /^[=+\-@]/.test(p || ''));
     // one block per item, "Item" first so the treasurer can filter by item
-    const rows = [['Item', 'No', 'Masa', 'Nama', 'Telefon', 'Jumlah RM'].map(x => cell(x))];
+    const rows = [['Item', 'No', 'Masa', 'Nama', 'Telefon', 'Jumlah RM', 'Online'].map(x => cell(x))];
+    const E = cell('');
     for (const l of st.lots) {
       const T = cell(l.title, true);
-      l.bids.forEach((b, i) => rows.push([T, cell(i + 1), cell(stamp(b.at)), cell(b.name, true), ph(b.phone), cell(b.amount)]));
+      l.bids.forEach((b, i) => rows.push([T, cell(i + 1), cell(stamp(b.at)), cell(b.name, true), ph(b.phone), cell(b.amount), cell(b.online ? 'Ya' : '')]));
       if (l.winner) {
-        rows.push([T, cell('Pemenang'), cell(l.closedAt ? stamp(l.closedAt) : ''), cell(l.winner.name, true), ph(l.winner.phone), cell(l.winner.amount)]);
+        rows.push([T, cell('Pemenang'), cell(l.closedAt ? stamp(l.closedAt) : ''), cell(l.winner.name, true), ph(l.winner.phone), cell(l.winner.amount), E]);
         rows.push(l.paid
-          ? [T, cell('Bayaran disahkan'), cell(stamp(l.paid.at)), cell(l.paid.ref || '', true), cell(''), cell('')]
-          : [T, cell('Bayaran'), cell(''), cell('Belum disahkan'), cell(''), cell('')]);
+          ? [T, cell('Bayaran disahkan'), cell(stamp(l.paid.at)), cell(l.paid.ref || '', true), E, E, E]
+          : [T, cell('Bayaran'), E, cell('Belum disahkan'), E, E, E]);
       } else if (l.status === 'closed') {
-        rows.push([T, cell('Pemenang'), cell(l.closedAt ? stamp(l.closedAt) : ''), cell('Tiada (ditutup tanpa bidaan)'), cell(''), cell('')]);
+        rows.push([T, cell('Pemenang'), cell(l.closedAt ? stamp(l.closedAt) : ''), cell('Tiada (ditutup tanpa bidaan)'), E, E, E]);
       } else if (!l.bids.length) {
-        rows.push([T, cell(''), cell(''), cell(l.status === 'open' ? 'Dibuka, belum ada bidaan' : 'Belum dibuka'), cell(''), cell('')]);
+        rows.push([T, E, E, cell(l.status === 'open' ? 'Dibuka, belum ada bidaan' : 'Belum dibuka'), E, E, E]);
       }
     }
+    // second section: every online submission, oldest first, with the review result
+    const subs = (st.pending || []).slice().reverse();
+    rows.push([]);
+    rows.push([cell('Bidaan online (semua penghantaran)')]);
+    rows.push(['Masa hantar', 'Nama', 'Telefon', 'Jumlah RM', 'Item', 'Status', 'Sebab', 'Masa semakan', 'ID resit'].map(x => cell(x)));
+    if (!subs.length) rows.push([cell('Tiada bidaan online')]);
+    for (const r of subs) rows.push([cell(stamp(r.at)), cell(r.name, true), ph(r.phone), cell(r.amount), cell(r.lotTitle, true),
+      cell(PQ_STATUS[r.status] || r.status), cell(r.reason || '', true), cell(r.reviewedAt ? stamp(r.reviewedAt) : ''), cell(r.id)]);
     return rows.map(r => r.join(',')).join('\r\n') + '\r\n';
   }
   $('csv-btn').addEventListener('click', () => {
@@ -1195,11 +1383,319 @@
     const st = await act({ action: 'reset', confirm: 'RESET' }, $('z-err'), e.currentTarget);
     if (st) {
       $('z-confirm').value = ''; $('z-btn').disabled = true;
-      Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, delAsk: false, rowErr: null });
+      Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, delAsk: false, rowErr: null, rej: null, pqErr: null });
+      ui.fresh.clear(); clearReceipts();
       amtEl.value = ''; render();
       toast('Bidaan semua item direset');
     } else $('z-btn').disabled = $('z-confirm').value.trim() !== 'RESET';
   });
+
+  /* ---------- online bids: receipt check, approve / reject ---------- */
+  const PQ_STATUS = { new: 'Menunggu semakan', ok: 'Diterima', rejected: 'Ditolak' };
+  const PQ_REASONS = ['Resit tidak sah', 'Jumlah yuran tidak betul', 'Sudah dilepasi'];
+  const FRESH_MS = 30000;
+  let onHtml = '', doneHtml = '', rvId = null;
+
+  function unfresh() {
+    const now = Date.now(); let gone = false;
+    for (const [id, t] of ui.fresh) if (now - t >= FRESH_MS) { ui.fresh.delete(id); gone = true; }
+    if (gone && S) render();
+  }
+
+  // receipts are admin-only: fetch with the PIN header, keep one blob URL per id
+  const rcCache = new Map(), rcDone = new Map();
+  function receipt(id) {
+    let p = rcCache.get(id);
+    if (p) return p;
+    p = (async () => {
+      let r;
+      try { r = await fetch(Live.API + '?receipt=' + encodeURIComponent(id), { headers: { 'X-Pin': pin }, cache: 'no-store' }); }
+      catch (e) { throw new Error('Tiada sambungan ke server. Cuba lagi.'); }
+      if (r.status === 401) throw new Error('PIN salah. Log masuk semula.');
+      if (r.status === 404) throw new Error('Fail resit tidak dijumpai di server.');
+      if (!r.ok) throw new Error('Resit tidak dapat dimuatkan (' + r.status + ').');
+      const b = await r.blob();
+      const rc = { url: URL.createObjectURL(b), pdf: b.type === 'application/pdf' };
+      rcDone.set(id, rc);
+      return rc;
+    })();
+    rcCache.set(id, p);
+    p.catch(() => { if (rcCache.get(id) === p) rcCache.delete(id); });
+    return p;
+  }
+  function clearReceipts() {
+    for (const rc of rcDone.values()) URL.revokeObjectURL(rc.url);
+    rcCache.clear(); rcDone.clear();
+  }
+
+  const pqFind = id => (S && S.pending || []).find(r => r.id === id);
+  const pqLot = r => S.lots.find(l => l.id === r.lotId);
+  // does this online bid still beat the item's current bid?
+  function pqCheck(r) {
+    const l = pqLot(r);
+    if (!l) return { bad: true, kind: 'gone', txt: 'Item ini sudah dipadam.' };
+    if (l.status !== 'open') return { bad: true, kind: 'closed', txt: l.status === 'closed' ? 'Bidaan item ini sudah ditutup.' : 'Bidaan item ini belum dibuka.' };
+    const t = lotTop(l);
+    if (r.amount < l.minNext) return { bad: true, kind: 'beaten', txt: t ? 'Sudah dilepasi oleh bidaan semasa ' + money(t.amount) + '.' : 'Kurang daripada harga mula ' + money(l.startPrice) + '.' };
+    return { bad: false, txt: t ? 'Melepasi bidaan semasa ' + money(t.amount) + ' (naik ' + money(r.amount - t.amount) + ').' : 'Bidaan pertama untuk item ini (harga mula ' + money(l.startPrice) + ').' };
+  }
+  function autoReason(r, kind) {
+    const l = r && pqLot(r);
+    if (kind === 'beaten') { const t = l && lotTop(l); return t && t.amount >= r.amount ? 'Sudah dilepasi oleh bidaan ' + money(t.amount) : 'Sudah dilepasi'; }
+    if (kind === 'closed') return 'Bidaan item ini sudah ditutup';
+    if (kind === 'gone') return 'Item ini sudah dibatalkan';
+    return '';
+  }
+  const rejReason = () => !ui.rej ? '' : ui.rej.auto ? autoReason(pqFind(ui.rej.id), ui.rej.auto) : ui.rej.reason;
+
+  // WhatsApp the bidder: phone -> 60…, message depends on the review status
+  function waPhone(p) {
+    let d = String(p || '').replace(/\D/g, '');
+    if (d[0] === '0') d = '6' + d;
+    else if (d[0] === '1' && d.length >= 9 && d.length <= 10) d = '60' + d;
+    return d;
+  }
+  function waText(r) {
+    const head = 'Salam ' + r.name + ', bidaan online anda ' + money(r.amount) + ' untuk ' + r.lotTitle;
+    if (r.status === 'ok') return head + ' telah DITERIMA dan kini dipaparkan. Terima kasih.';
+    if (r.status === 'rejected') return head + ' DITOLAK: ' + (r.reason || 'tiada sebab diberi') + '. Sila hubungi urus setia jika ada pertanyaan.';
+    return head + ' sedang disemak oleh urus setia.';
+  }
+  function waBtn(r, label, cls) {
+    const ph = waPhone(r.phone);
+    if (ph.length < 10) return '';
+    return '<a class="btn btn-outline btn-sm ' + (cls || '') + '" href="https://wa.me/' + esc(ph) + '?text=' + esc(encodeURIComponent(waText(r))) +
+      '" target="_blank" rel="noopener">' + esc(label || 'WhatsApp pembida') + '</a>';
+  }
+
+  function rcThumb(r, cls) {
+    const label = 'Lihat resit ' + r.name;
+    return '<button class="' + cls + '" type="button" data-view="' + esc(r.id) + '" aria-label="' + esc(label) + '">' +
+      (r.type === 'pdf' ? '<span class="rc-pdf">PDF</span><small>Resit</small>'
+        : '<small>Resit</small><img data-rc="' + esc(r.id) + '" alt="">') + '</button>';
+  }
+  function pqRow(r) {
+    const c = pqCheck(r), fresh = ui.fresh.has(r.id), rej = ui.rej && ui.rej.id === r.id;
+    let h = '<li class="pq' + (fresh ? ' fresh' : '') + '" data-pid="' + esc(r.id) + '"><div class="pq-top">' + rcThumb(r, 'rc') +
+      '<div><div class="pq-amt">' + money(r.amount) + (fresh ? '<span class="pq-new">Baharu</span>' : '') + '</div>' +
+      '<div class="pq-who">' + esc(r.name) + '</div>' +
+      '<div class="pq-meta">' + esc(r.phone) + ' · ' + esc(Live.time(r.at)) + '</div>' +
+      '<div class="pq-meta">' + esc(r.lotTitle) + '</div></div></div>' +
+      '<p class="pq-chk' + (c.bad ? ' bad' : '') + '">' + esc(c.txt) + '</p>';
+    if (ui.pqErr && ui.pqErr.id === r.id) h += '<p class="err" role="alert">' + esc(ui.pqErr.msg) + '</p>';
+    if (rej) {
+      h += '<div class="pq-rej"><label class="f" for="rej-in">Sebab ditolak <span class="muted">(dipaparkan kepada pembida)</span></label>' +
+        '<input class="in" id="rej-in" maxlength="160" autocomplete="off" enterkeyhint="done">' +
+        '<div class="chips">' + PQ_REASONS.map(x => '<button class="btn btn-outline btn-sm" type="button" data-reason="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
+        '<div class="row"><button class="btn btn-danger" type="button" data-rej-yes="' + esc(r.id) + '">Tolak bidaan</button>' +
+        '<button class="btn btn-outline" type="button" data-rej-no="1">Batal</button></div></div>';
+    } else {
+      h += '<div class="pq-act"><button class="btn" type="button" data-approve="' + esc(r.id) + '">Terima</button>' +
+        '<button class="btn btn-outline" type="button" data-reject="' + esc(r.id) + '">Tolak</button></div>';
+    }
+    return h + waBtn(r, 'WhatsApp pembida', 'pq-wa') + '</li>';
+  }
+  function dnRow(r) {
+    const ok = r.status === 'ok';
+    return '<li class="dn"><div class="dn-l"><b>' + esc(r.name) + '</b>' +
+      '<div class="pq-meta">' + esc(r.phone) + ' · ' + esc(Live.time(r.at)) + ' · ' + esc(r.lotTitle) + '</div>' +
+      '<div class="pq-meta"><span class="' + (ok ? 'st-ok' : 'st-no') + '">' + (ok ? 'Diterima' : 'Ditolak') + '</span>' +
+      (r.reviewedAt ? ' ' + esc(hm(r.reviewedAt)) : '') + (!ok && r.reason ? ': ' + esc(r.reason) : '') + '</div>' +
+      waBtn(r, 'WhatsApp pembida', 'dn-wa') + '</div>' +
+      '<div class="dn-r"><span class="amt">' + money(r.amount) + '</span>' +
+      '<button class="link-btn" type="button" data-view="' + esc(r.id) + '">Lihat resit</button></div></li>';
+  }
+
+  function renderOnline() {
+    const all = S.pending || [], news = all.filter(r => r.status === 'new'), done = all.filter(r => r.status !== 'new');
+    const n = news.length, p = S.payment || {};
+    $('console').classList.toggle('has-new', n > 0);
+    const msg = n + ' bidaan online menunggu semakan';
+    show($('s-pend'), n > 0);
+    $('s-pend-t').textContent = msg;
+    if (ui.ping && n) { const a = $('s-pend'); a.classList.remove('ping'); void a.offsetWidth; a.classList.add('ping'); }
+    ui.ping = false;
+    document.title = (n ? '(' + n + ') ' : '') + BASE_TITLE;
+    $('on-count').textContent = n ? n + ' menunggu' : '';
+
+    const on = p.onlineOn !== false;
+    $('on-state').innerHTML = '<span class="status' + (on ? ' on' : '') + '">' + (on ? 'Dibuka untuk tetamu' : 'Ditutup untuk tetamu') + '</span>' +
+      '<span class="num">Yuran ' + money(p.deposit == null ? 10 : p.deposit) + '</span>' +
+      '<button class="link-btn" type="button" data-settings="1">Tetapan</button>';
+    const miss = [];
+    if (on && !(p.bank && p.accNo)) miss.push('akaun untuk bayaran yuran');
+    if (on && !p.wa) miss.push('no. WhatsApp untuk bantuan');
+    $('on-warn').textContent = miss.length ? 'Belum diisi: ' + miss.join(' dan ') + '. Isi di Tetapan.' : '';
+    show($('on-warn'), miss.length > 0);
+
+    // just reviewed here: remind the admin to tell the bidder
+    const nr = ui.notify && all.find(r => r.id === ui.notify.id && r.status !== 'new');
+    const nh = nr ? '<p><b>' + (nr.status === 'ok' ? 'Diterima' : 'Ditolak') + ':</b> ' + money(nr.amount) + ' oleh ' + esc(nr.name) + '</p>' +
+      '<div class="row">' + waBtn(nr, 'Maklumkan pembida melalui WhatsApp') + '<button class="btn btn-outline btn-sm" type="button" data-notify-x="1">Tutup</button></div>' : '';
+    const ne = $('on-notify');
+    if (ne.dataset.h !== nh) { ne.dataset.h = nh; ne.innerHTML = nh; }
+    show(ne, !!nh);
+
+    const html = n ? news.map(pqRow).join('') : '<li class="empty">Tiada bidaan online menunggu semakan.</li>';
+    const pq = $('pq');
+    let rebuilt = false, sel = null;
+    if (html !== onHtml) {
+      const had = document.activeElement && document.activeElement.id === 'rej-in';
+      sel = had ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
+      onHtml = html; pq.innerHTML = html; rebuilt = true;
+    }
+    // the reason text lives in ui.rej (not in the HTML), so a rebuild while typing keeps it
+    const inp = $('rej-in');
+    if (inp && (rebuilt || ui.rej.auto || document.activeElement !== inp) && inp.value !== rejReason()) inp.value = rejReason();
+    if (inp && sel) { inp.focus({ preventScroll: true }); try { inp.setSelectionRange(sel[0], sel[1]); } catch (e) {} }
+    fillThumbs();
+
+    show($('done'), done.length > 0);
+    const ok = done.filter(r => r.status === 'ok').length;
+    $('done-sum').textContent = 'Sudah disemak (' + done.length + ': ' + ok + ' diterima, ' + (done.length - ok) + ' ditolak)';
+    const dh = done.map(dnRow).join('');
+    if (dh !== doneHtml) { doneHtml = dh; $('dn').innerHTML = dh; }
+  }
+
+  function fillThumbs() {
+    for (const im of $('pq').querySelectorAll('img[data-rc]')) {
+      const id = im.dataset.rc, rc = rcDone.get(id);
+      if (rc) { if (im.getAttribute('src') !== rc.url) im.src = rc.url; continue; }
+      receipt(id).then(rc => {
+        const el = $('pq').querySelector('img[data-rc="' + CSS.escape(id) + '"]');
+        if (el && !rc.pdf) el.src = rc.url;
+      }).catch(() => {
+        const el = $('pq').querySelector('img[data-rc="' + CSS.escape(id) + '"]');
+        if (el && el.previousElementSibling) el.previousElementSibling.textContent = 'Resit tidak dapat dimuatkan';
+      });
+    }
+  }
+
+  async function approve(id, btn) {
+    const r = pqFind(id); if (!r || busy) return;
+    ui.fresh.delete(id); ui.approving = id;
+    const err = msg => { ui.pqErr = msg ? { id, msg } : null; };
+    const st = await act({ action: 'reviewBid', id, decision: 'approve' }, err, btn);
+    ui.approving = null;
+    if (st) { toast('Diterima: ' + money(r.amount) + ' oleh ' + r.name); remind(id); return; }
+    // refused: the amount was beaten or the item closed -> offer reject with that reason filled in
+    const m = ui.pqErr && ui.pqErr.id === id ? ui.pqErr.msg : '';
+    const kind = /dilepasi/i.test(m) ? 'beaten' : /ditutup/i.test(m) ? 'closed' : /dipadam/i.test(m) ? 'gone' : '';
+    if (kind && pqFind(id)) { ui.rej = { id, reason: '', auto: kind }; render(); focusRow(id, false); }
+  }
+  function remind(id) {
+    ui.notify = { id }; clearTimeout(ui.notifyTimer);
+    ui.notifyTimer = setTimeout(() => { ui.notify = null; if (S) render(); }, 90000);
+    render();
+  }
+  function startReject(id, auto) {
+    ui.rej = { id, reason: '', auto: auto || '' }; ui.fresh.delete(id);
+    if (ui.pqErr && ui.pqErr.id === id && !auto) ui.pqErr = null;
+    render(); focusRow(id, true);
+  }
+  function focusRow(id, toInput) {
+    const li = $('pq').querySelector('[data-pid="' + CSS.escape(id) + '"]');
+    if (!li) return;
+    li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const inp = $('rej-in');
+    if (toInput && inp) inp.focus({ preventScroll: true });
+    else { const b = li.querySelector('[data-rej-yes]'); if (b) b.focus({ preventScroll: true }); }
+  }
+  async function reject(id, btn) {
+    const r = pqFind(id); if (!r || busy) return;
+    const reason = rejReason().trim().replace(/\s+/g, ' ');
+    if (!reason) { ui.pqErr = { id, msg: 'Pilih atau tulis sebab ditolak.' }; render(); const i = $('rej-in'); if (i) i.focus(); return; }
+    const st = await act({ action: 'reviewBid', id, decision: 'reject', reason }, msg => { ui.pqErr = msg ? { id, msg } : null; }, btn);
+    if (st) { ui.rej = null; remind(id); toast('Ditolak: ' + r.name); }
+  }
+
+  $('on-sec').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || !S) return;
+    const li = b.closest('.pq'); if (li && ui.fresh.delete(li.dataset.pid)) li.classList.remove('fresh');
+    if (b.dataset.view) openViewer(b.dataset.view);
+    else if (b.dataset.approve) approve(b.dataset.approve, b);
+    else if (b.dataset.reject) startReject(b.dataset.reject);
+    else if (b.dataset.rejNo) { ui.rej = null; ui.pqErr = null; render(); }
+    else if (b.dataset.rejYes) reject(b.dataset.rejYes, b);
+    else if (b.dataset.reason) {
+      if (!ui.rej) return;
+      if (b.dataset.reason === 'Sudah dilepasi') { ui.rej.auto = 'beaten'; ui.rej.reason = ''; }
+      else { ui.rej.auto = ''; ui.rej.reason = b.dataset.reason; }
+      if (ui.pqErr && ui.pqErr.id === ui.rej.id && /sebab/.test(ui.pqErr.msg)) ui.pqErr = null;
+      const i = $('rej-in'); if (i) i.value = rejReason();     // Safari keeps focus in the input on tap
+      render();
+      const y = $('pq').querySelector('[data-rej-yes]'); if (y) y.focus();
+    }
+    else if (b.dataset.settings) openSettings('t-online');
+    else if (b.dataset.notifyX) { ui.notify = null; render(); }
+  });
+  $('on-sec').addEventListener('input', e => {
+    if (e.target.id !== 'rej-in' || !ui.rej) return;
+    ui.rej.auto = ''; ui.rej.reason = e.target.value;
+  });
+  $('on-sec').addEventListener('keydown', e => {
+    if (e.target.id !== 'rej-in' || !ui.rej) return;
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); const y = $('pq').querySelector('[data-rej-yes]'); if (y) reject(ui.rej.id, y); }
+    else if (e.key === 'Escape') { e.preventDefault(); ui.rej = null; render(); }
+  });
+  $('s-pend').addEventListener('click', () => {
+    $('on-sec').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const first = $('pq').querySelector('[data-approve]');
+    if (first) first.focus({ preventScroll: true });
+  });
+  function openSettings(focusId) {
+    const d = $('set'); d.open = true;
+    const g = $('t-grp-online');
+    (focusId === 't-online' ? g : d).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => $(focusId).focus({ preventScroll: true }), 350);
+  }
+
+  /* receipt viewer (in-page dialog) */
+  const rv = $('rv');
+  function viewerFoot() {
+    const r = pqFind(rvId); if (!r) return;
+    const isNew = r.status === 'new';
+    show($('rv-ok'), isNew); show($('rv-no'), isNew);
+    const c = isNew ? pqCheck(r) : null;
+    $('rv-hint').textContent = isNew ? 'Semak resit: yuran ' + money((S.payment || {}).deposit == null ? 10 : S.payment.deposit) + '. ' + c.txt
+      : (r.status === 'ok' ? 'Diterima' : 'Ditolak' + (r.reason ? ': ' + r.reason : '')) + (r.reviewedAt ? ' pada ' + hm(r.reviewedAt) : '') + '.';
+  }
+  async function openViewer(id) {
+    const r = pqFind(id); if (!r) return;
+    rvId = id;
+    $('rv-title').textContent = r.name;
+    $('rv-sub').textContent = money(r.amount) + ' · ' + r.phone + ' · ' + r.lotTitle;
+    const body = $('rv-body');
+    body.classList.remove('zoom');
+    body.innerHTML = '<p class="muted">Memuatkan resit…</p>';
+    show($('rv-pdf'), false);
+    viewerFoot();
+    if (!rv.open) rv.showModal();
+    $('rv-x').focus();
+    try {
+      const rc = await receipt(id);
+      if (rvId !== id) return;
+      body.textContent = '';
+      if (rc.pdf) {
+        const f = document.createElement('iframe'); f.title = 'Resit PDF'; f.src = rc.url; body.appendChild(f);
+        $('rv-pdf').href = rc.url; show($('rv-pdf'), true);
+      } else {
+        const im = document.createElement('img'); im.alt = 'Resit yuran ' + r.name; im.src = rc.url; im.title = 'Ketik untuk zum';
+        im.addEventListener('click', () => body.classList.toggle('zoom'));
+        body.appendChild(im);
+      }
+    } catch (e) {
+      if (rvId !== id) return;
+      body.innerHTML = '<p class="err">' + esc(e.message) + '</p>';
+    }
+  }
+  function closeViewer() { if (rv.open) rv.close(); else { rvId = null; $('rv-body').textContent = ''; } }
+  // the close event comes a moment later: skip it if the viewer was opened again meanwhile
+  rv.addEventListener('close', () => { if (rv.open) return; rvId = null; $('rv-body').textContent = ''; });
+  rv.addEventListener('click', e => { if (e.target === rv) closeViewer(); });
+  $('rv-x').addEventListener('click', closeViewer);
+  $('rv-ok').addEventListener('click', () => { const id = rvId; closeViewer(); approve(id, null); });
+  $('rv-no').addEventListener('click', () => { const id = rvId; closeViewer(); startReject(id); });
 
   /* ---------- live sync ---------- */
   const conn = $('conn');

@@ -153,6 +153,69 @@
     .flash, .status.open::before { animation: none; }
   }
   .screen-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; font-weight: 500; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .foot-note .screen-link { display: flex; width: fit-content; }
+  .foot-note .screen-link + .screen-link { margin-top: 0; }
+
+  /* online bids */
+  .otag { display: inline-block; margin-left: 6px; padding: 0 6px; border: 1px solid var(--ink); border-radius: 4px; font: 500 12px/18px var(--font); color: var(--ink); vertical-align: 2px; white-space: nowrap; }
+  .winner .otag { border-color: rgba(255, 255, 255, .7); color: #fff; vertical-align: 4px; }
+  .pend { margin-top: 10px; font-size: 14px; color: var(--muted); }
+  .online { padding-top: 40px; max-width: 640px; }
+  .online h2 { font-size: clamp(26px, 6vw, 34px); }
+  .online .sub { margin-top: 6px; color: var(--ink-2); }
+  .oitem { margin-top: 4px; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+  .onote { margin-top: 16px; padding: 14px 16px; }
+  .steps { list-style: none; margin: 20px 0 0; padding: 0; border-top: 1px solid var(--ink); }
+  .step { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+  .sn { font: 400 24px/1.05 var(--display); font-variant-numeric: tabular-nums; }
+  .step h3 { font-size: 21px; line-height: 1.2; }
+  .pay { margin-top: 12px; padding: 4px 16px; }
+  .pay .row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .pay .row:last-child { border-bottom: 0; }
+  .pay .k { font-size: 13px; color: var(--muted); }
+  .pay .v { font-weight: 500; overflow-wrap: anywhere; }
+  .pay .acc { font-size: 18px; letter-spacing: .02em; }
+  .pay .copy { min-height: 44px; }
+  .pay-msg { margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+  .pay-note { margin-top: 10px; font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
+  .fld { margin-top: 14px; }
+  .hint { margin-top: 6px; font-size: 14px; color: var(--muted); }
+  .hint.bad { color: var(--live); }
+  .amt-in { position: relative; }
+  .amt-in span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .amt-in .in { padding-left: 46px; font-size: 18px; }
+  .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; white-space: nowrap; }
+  .filebtn { position: relative; width: 100%; text-align: center; line-height: 1.25; }
+  .filebtn:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .fprev { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; min-width: 0; }
+  .fprev img, .fprev .doc { flex: none; width: 64px; height: 64px; border-radius: 6px; object-fit: cover; background: var(--tile); }
+  .fprev .doc { display: flex; align-items: center; justify-content: center; font: 500 13px/1 var(--font); color: var(--ink-2); }
+  .fprev span { min-width: 0; }
+  .osend { width: 100%; margin-top: 4px; }
+  .ferr { margin-top: 12px; font-size: 15px; color: var(--live); overflow-wrap: anywhere; }
+  .ferr:empty { display: none; }
+  .onotes { margin-top: 14px; font-size: 14px; color: var(--ink-2); }
+  .onotes p + p { margin-top: 4px; }
+  .ocard { margin-top: 20px; padding: 18px 16px; }
+  .ocard.ok { background: var(--ok-soft); }
+  .ocard.no { background: var(--live-soft); }
+  .ocard .k { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+  .ocard.ok .k { color: var(--ok); }
+  .ocard.no .k { color: var(--live); }
+  .ocard .v { margin-top: 4px; font-size: 17px; overflow-wrap: anywhere; }
+  .ocard .btn { width: 100%; margin-top: 16px; }
+  .mine { margin-top: 32px; }
+  .mine h3 { font-size: 22px; padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
+  .mine ul { list-style: none; margin: 0; padding: 0; }
+  .mine li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .mine .mt { min-width: 0; overflow-wrap: anywhere; }
+  .mine .mt b { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .mine .ml { display: block; font-size: 13px; color: var(--muted); }
+  .mst { margin-top: 2px; display: block; font-size: 14px; color: var(--muted); }
+  .mst.ok { color: var(--ok); font-weight: 500; }
+  .mst.no { color: var(--live); font-weight: 500; }
+  .owa { margin-top: 20px; font-size: 14px; color: var(--ink-2); }
+  .owa a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 500; color: var(--ink); text-underline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -199,14 +262,17 @@
         <div class="winner" id="winner" hidden></div>
         <p class="paid" id="paid" hidden>Bayaran telah disahkan</p>
         <p class="news" id="news" role="status" aria-live="polite"></p>
+        <p class="pend" id="pend" hidden></p>
         <div class="foot-note">
-          <p class="rule">Bidaan dibuat secara langsung dalam dewan dan direkod oleh urus setia.</p>
+          <p class="rule" id="rule">Bidaan dibuat secara langsung dalam dewan dan direkod oleh urus setia.</p>
+          <a class="screen-link" id="oLink" href="#online" hidden>Bida secara online <span aria-hidden="true">→</span></a>
           <p class="conn" id="conn">Menyambung…</p>
           <a class="screen-link" href="skrin.html">Buka paparan skrin besar <span aria-hidden="true">→</span></a>
         </div>
       </div>
     </section>
 
+    <div class="side">
     <section class="history" id="sejarah" aria-labelledby="hTitle">
       <div class="history-head">
         <h2 id="hTitle">Senarai bidaan</h2>
@@ -214,6 +280,85 @@
       </div>
       <ul class="bids" id="bids"><li class="empty">Memuatkan…</li></ul>
     </section>
+
+    <section class="online" id="online" aria-labelledby="oTitle" hidden>
+      <div class="online-head">
+        <h2 id="oTitle">Bida secara online</h2>
+        <p class="sub">Untuk tetamu yang tidak berada dalam dewan.</p>
+        <p class="oitem" id="oItem" hidden></p>
+      </div>
+      <p class="onote tile" id="oDraft" hidden>Bidaan online dibuka bila bidaan bermula.</p>
+      <p class="onote tile" id="oShut" hidden></p>
+
+      <div class="ocard tile" id="oCard" role="status" aria-live="polite" hidden>
+        <p class="k" id="oCardK"></p>
+        <p class="v" id="oCardV"></p>
+        <button class="btn btn-outline" type="button" id="oAgain">Hantar bidaan lain</button>
+      </div>
+
+      <form id="oForm" novalidate hidden>
+        <ol class="steps">
+          <li class="step">
+            <span class="sn" aria-hidden="true">1</span>
+            <div class="sb">
+              <h3 id="payH">Bayar yuran</h3>
+              <div id="payBox"></div>
+            </div>
+          </li>
+          <li class="step">
+            <span class="sn" aria-hidden="true">2</span>
+            <div class="sb">
+              <h3>Isi butiran bidaan</h3>
+              <div class="fld">
+                <label class="f" for="oName">Nama penuh</label>
+                <input class="in" id="oName" name="name" type="text" autocomplete="name" maxlength="60" required>
+              </div>
+              <div class="fld">
+                <label class="f" for="oPhone">No. telefon</label>
+                <input class="in" id="oPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="Contoh: 012 345 6789" required>
+                <p class="hint">Hanya urus setia yang melihat nombor ini.</p>
+              </div>
+              <div class="fld">
+                <label class="f" for="oAmt">Jumlah bidaan (RM)</label>
+                <div class="amt-in">
+                  <span aria-hidden="true">RM</span>
+                  <input class="in num" id="oAmt" name="amount" type="text" inputmode="numeric" autocomplete="off" aria-describedby="oAmtHint" required>
+                </div>
+                <p class="hint" id="oAmtHint"></p>
+              </div>
+              <div class="fld">
+                <span class="f" id="oFileL">Resit yuran</span>
+                <label class="filebtn btn btn-outline" id="oFileBtn">
+                  <input class="sr" id="oFile" name="receipt" type="file" accept="image/*,application/pdf" aria-labelledby="oFileL oFileBtnT">
+                  <span id="oFileBtnT">Pilih gambar atau PDF resit</span>
+                </label>
+                <div class="fprev" id="oPrev" hidden></div>
+              </div>
+            </div>
+          </li>
+          <li class="step">
+            <span class="sn" aria-hidden="true">3</span>
+            <div class="sb">
+              <h3>Hantar bidaan</h3>
+              <button class="btn osend" type="submit" id="oSend" disabled>Hantar bidaan</button>
+              <p class="ferr" id="oErr" role="alert"></p>
+              <div class="onotes">
+                <p>Setiap bidaan online perlu resit yuran yang berasingan.</p>
+                <p>Jika bidaan anda dilepasi sebelum disemak, ia akan ditolak.</p>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </form>
+
+      <div class="mine" id="mine" hidden>
+        <h3>Bidaan online saya</h3>
+        <ul id="mineList"></ul>
+      </div>
+
+      <p class="owa" id="oWa" hidden>Ada masalah? <a id="oWaLink" href="#" target="_blank" rel="noopener">WhatsApp urus setia</a></p>
+    </section>
+    </div>
   </div>
 
   <div class="wrap">
@@ -344,6 +489,7 @@
   });
 
   /* ---------- live state ---------- */
+  var OTAG = ' <span class="otag">Online</span>';
   var prev = null, newsTimer = null, peekWanted = false, loaded = false;
   var FEATURED_THUMB = 'assets/img/nikaziz-vest-hanger.jpg';
 
@@ -427,6 +573,7 @@
 
   function render(s, changed) {
     renderNow(s);
+    renderOnline(s);
     renderLots(s);
     var bids = s.bids || [], n = bids.length, top = n ? bids[n - 1] : null;
     var status = s.status, startP = money(s.startPrice);
@@ -444,14 +591,15 @@
       var w = s.winner || (top ? { name: top.name, amount: top.amount } : null);
       if (w) {
         label = 'Harga akhir'; priceText = money(w.amount);
-        win = '<p class="k">Pemenang</p><p class="v">' + esc(w.name) + ' — <span class="num">' + esc(money(w.amount)) + '</span></p>';
+        var wOnline = !!(top && top.online && top.name === w.name && Number(top.amount) === Number(w.amount));
+        win = '<p class="k">Pemenang</p><p class="v">' + esc(w.name) + (wOnline ? OTAG : '') + ' — <span class="num">' + esc(money(w.amount)) + '</span></p>';
       } else {
         label = 'Keputusan'; priceText = 'Tiada bidaan'; word = true;
         by = 'Harga mula <span class="num">' + esc(startP) + '</span>';
       }
     } else if (top) {
       label = 'Bidaan tertinggi'; priceText = money(top.amount);
-      by = 'oleh <strong>' + esc(top.name) + '</strong>';
+      by = 'oleh <strong>' + esc(top.name) + '</strong>' + (top.online ? OTAG : '');
     } else {
       label = 'Harga mula'; priceText = startP;
       by = status === 'open' ? 'Menunggu bidaan pertama.' : 'Bidaan belum dibuka. Sila tunggu pengumuman pengacara majlis.';
@@ -468,10 +616,13 @@
     setText('next', next);
     setText('winner', win);
     $('paid').hidden = !(status === 'closed' && s.paid);
+    var pc = Number(s.pendingCount) || 0;
+    $('pend').textContent = pc > 0 ? pc + ' bidaan online sedang disemak' : '';
+    $('pend').hidden = !(pc > 0 && status !== 'closed');
 
     /* bid history, newest first */
     $('bids').innerHTML = n ? bids.slice().reverse().map(function (b, i) {
-      return '<li' + (i === 0 ? ' id="topBid"' : '') + '><div class="who"><span class="name">' + esc(b.name) + '</span>' +
+      return '<li' + (i === 0 ? ' id="topBid"' : '') + '><div class="who"><span class="name">' + esc(b.name) + (b.online ? OTAG : '') + '</span>' +
         '<span class="t num">' + esc(Live.time(b.at)) + (i === 0 && status !== 'closed' ? ' · tertinggi' : '') + '</span></div>' +
         '<span class="amt">' + esc(money(b.amount)) + '</span></li>';
     }).join('') : '<li class="empty">Belum ada bidaan.</li>';
@@ -515,7 +666,281 @@
     }, { rootMargin: '-60px 0px 0px 0px', threshold: 0.35 }).observe($('panel'));
   }
 
-  Live.watch(render, onConn, 2000);
+  /* ---------- online bidding (fee receipt, checked by the admin before it shows) ---------- */
+  var SUBS_KEY = 'ebid.online.subs', ME_KEY = 'ebid.online.me', MAX_FILE = 10 * 1024 * 1024;
+  function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage off: page still works */ } }
+
+  var subs = lsGet(SUBS_KEY, []);
+  subs = (Array.isArray(subs) ? subs : []).filter(function (x) { return x && typeof x.id === 'string' && /^[a-f0-9]{8,64}$/.test(x.id); });
+  var cur$ = null, onlineForm = false, sending = false, cardId = '', pickedFile = null, previewUrl = '', payKey = '';
+  var me = lsGet(ME_KEY, {}) || {};
+  if (typeof me.name === 'string') $('oName').value = me.name;
+  if (typeof me.phone === 'string') $('oPhone').value = me.phone;
+
+  function minOnline() { var s = cur$ || {}; return Number(s.minOnline != null ? s.minOnline : s.minNext) || 0; }
+  function parseAmt(v) { var d = String(v || '').replace(/[^\d]/g, ''); return d ? parseInt(d, 10) : 0; }
+  function saveSubs() { lsSet(SUBS_KEY, subs.slice(0, 30)); }
+  function subById(id) { for (var i = 0; i < subs.length; i++) if (subs[i].id === id) return subs[i]; return null; }
+
+  function statusText(x) {
+    if (x.status === 'ok') return 'Diterima — bidaan anda kini dipaparkan';
+    if (x.status === 'rejected') return 'Ditolak' + (x.reason ? ': ' + x.reason : '');
+    if (x.status === 'gone') return 'Rekod tidak dijumpai. Hubungi urus setia.';
+    return 'Sedang disemak oleh urus setia';
+  }
+
+  function renderOnline(s) {
+    cur$ = s;
+    var p = s.payment || {}, on = !!p.onlineOn, st = s.status;
+    onlineForm = on && st === 'open';
+    var draft = on && st === 'draft';
+    var multi = (s.lots || []).length > 1 || !(s.lot || {}).featured;
+    var title = titleOf(s.lot || {});
+
+    $('oItem').textContent = 'Item: ' + title;
+    $('oItem').hidden = !multi || !(onlineForm || draft);
+    $('oDraft').hidden = !draft;
+    $('oShut').textContent = on ? 'Bidaan online untuk item ini sudah ditutup.' : 'Bidaan online ditutup buat masa ini.';
+    $('oShut').hidden = onlineForm || draft;
+    $('oLink').hidden = !onlineForm;
+    $('rule').textContent = on ? 'Bidaan dibuat dalam dewan atau secara online, dan direkod oleh urus setia.'
+      : 'Bidaan dibuat secara langsung dalam dewan dan direkod oleh urus setia.';
+
+    /* step 1: payment details (rebuilt only when they change, so the copy button keeps its feedback) */
+    var dep = Number(p.deposit) || 0;
+    $('payH').textContent = dep > 0 ? 'Bayar yuran ' + money(dep) : 'Bayar yuran bidaan';
+    var key = JSON.stringify([p.bank, p.accName, p.accNo, p.note]);
+    if (key !== payKey) {
+      payKey = key;
+      var rows = '';
+      if (p.bank) rows += '<div class="row"><div><p class="k">Bank</p><p class="v">' + esc(p.bank) + '</p></div></div>';
+      if (p.accName) rows += '<div class="row"><div><p class="k">Nama akaun</p><p class="v">' + esc(p.accName) + '</p></div></div>';
+      if (p.accNo) rows += '<div class="row"><div><p class="k">No. akaun</p><p class="v acc num" id="accNo">' + esc(p.accNo) + '</p></div>' +
+        '<button class="btn btn-outline btn-sm copy" type="button" id="copyAcc">Salin no. akaun</button></div>';
+      $('payBox').innerHTML = (p.bank || p.accName || p.accNo)
+        ? '<div class="pay tile">' + rows + '</div><p class="pay-msg" id="copyMsg" role="status"></p>' +
+          '<p class="pay-msg">Simpan resit atau tangkap layar bukti pemindahan.</p>'
+        : '<p class="pay-msg">Hubungi urus setia untuk butiran bayaran.</p>';
+      if (p.note) $('payBox').insertAdjacentHTML('beforeend', '<p class="pay-note">' + esc(p.note) + '</p>');
+    }
+
+    var wa = String(p.wa || '').replace(/\D/g, '');
+    $('oWaLink').href = wa ? 'https://wa.me/' + wa + '?text=' + encodeURIComponent('Salam, saya ada masalah dengan bidaan online untuk ' + title) : '#';
+    $('oWa').hidden = !wa;
+
+    validate();
+    renderBox();
+  }
+
+  /* which blocks of the section show: the form, the result card, my list */
+  function renderBox() {
+    var s = cur$ || {}, on = !!(s.payment || {}).onlineOn;
+    var card = cardId ? subById(cardId) : null;
+    $('oForm').hidden = !onlineForm || !!card;
+    $('oAgain').hidden = !onlineForm;
+    if (card) {
+      var c = $('oCard');
+      c.className = 'ocard tile' + (card.status === 'ok' ? ' ok' : card.status === 'rejected' ? ' no' : '');
+      $('oCardK').textContent = card.status === 'new' ? 'Sedang disemak' : 'Bidaan online ' + money(card.amount);
+      $('oCardV').textContent = card.status === 'new'
+        ? 'Bidaan ' + money(card.amount) + ' sedang disemak oleh urus setia. Bidaan akan dipaparkan selepas resit disahkan.'
+        : card.status === 'ok' ? 'Diterima — bidaan ' + money(card.amount) + ' anda kini dipaparkan.'
+        : card.status === 'rejected' ? 'Ditolak: ' + (card.reason || 'tiada sebab diberi') + '.'
+        : statusText(card);
+    }
+    $('oCard').hidden = !card;
+
+    $('mineList').innerHTML = subs.map(function (x) {
+      var cls = x.status === 'ok' ? ' ok' : (x.status === 'rejected' || x.status === 'gone') ? ' no' : '';
+      return '<li><div class="mt"><b>' + esc(money(x.amount)) + '</b>' +
+        (x.lotTitle ? '<span class="ml">' + esc(x.lotTitle) + (x.at ? ' · ' + esc(Live.time(x.at)) : '') + '</span>' : '') +
+        '<span class="mst' + cls + '">' + esc(statusText(x)) + '</span></div></li>';
+    }).join('');
+    $('mine').hidden = !subs.length;
+
+    var draft = on && s.status === 'draft';
+    $('online').hidden = !(onlineForm || draft || subs.length || card);
+  }
+
+  function validate() {
+    var min = minOnline(), raw = $('oAmt').value, amt = parseAmt(raw), h = $('oAmtHint');
+    $('oAmt').placeholder = min ? String(min) : '';
+    var low = raw.trim() !== '' && amt < min;
+    h.classList.toggle('bad', low);
+    h.textContent = (low ? 'Jumlah di bawah minimum. Sekurang-kurangnya ' : 'Sekurang-kurangnya ') + money(min) +
+      '. Mesti lebih tinggi daripada bidaan semasa dan bidaan online yang sedang disemak.';
+    $('oSend').disabled = sending || !onlineForm || !(amt >= min && min > 0);
+    if (!sending) $('oSend').textContent = 'Hantar bidaan';
+  }
+  $('oAmt').addEventListener('input', function () {
+    var el = this, d = el.value.replace(/[^\d]/g, '').replace(/^0+/, '').slice(0, 9);
+    if (el.value !== d) el.value = d;
+    validate();
+  });
+
+  /* copy account number */
+  $('payBox').addEventListener('click', function (e) {
+    if (!e.target.closest('#copyAcc')) return;
+    var no = ($('accNo') || {}).textContent || '', msg = $('copyMsg');
+    function done(ok) { if (msg) msg.textContent = ok ? 'No. akaun disalin.' : 'Tidak dapat menyalin. Sila salin secara manual: ' + no; }
+    function legacy() {
+      var ok = false, t = document.createElement('textarea');
+      try {
+        t.value = no; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+        document.body.appendChild(t); t.select(); ok = document.execCommand('copy');
+      } catch (err) { ok = false; }
+      if (t.parentNode) t.parentNode.removeChild(t);
+      done(ok);
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(no).then(function () { done(true); }, legacy);
+      else legacy();
+    } catch (err) { legacy(); }
+  });
+
+  /* receipt file: preview */
+  function showPreview(f) {
+    if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) {} previewUrl = ''; }
+    var box = $('oPrev');
+    if (!f) { box.hidden = true; box.innerHTML = ''; $('oFileBtnT').textContent = 'Pilih gambar atau PDF resit'; return; }
+    var kb = f.size >= 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB';
+    var isImg = /^image\//.test(f.type);
+    if (isImg) { try { previewUrl = URL.createObjectURL(f); } catch (e) { previewUrl = ''; } }
+    box.innerHTML = (isImg && previewUrl ? '<img src="' + esc(previewUrl) + '" alt="Pratonton resit">' : '<span class="doc" aria-hidden="true">' + (isImg ? 'IMG' : 'PDF') + '</span>') +
+      '<span>' + esc(f.name || 'resit') + ' · ' + esc(kb) + '</span>';
+    box.hidden = false;
+    $('oFileBtnT').textContent = 'Tukar resit';
+  }
+  $('oFile').addEventListener('change', function () {
+    pickedFile = this.files && this.files[0] ? this.files[0] : null;
+    showPreview(pickedFile);
+    $('oErr').textContent = '';
+  });
+
+  /* shrink big photos to max 1600px JPEG before upload; PDFs and failures go as they are */
+  function prepFile(f) {
+    var asIs = Promise.resolve({ blob: f, name: f.name || 'resit' });
+    if (!/^image\//.test(f.type) || f.type === 'image/gif' || f.type === 'image/svg+xml') return asIs;
+    var odd = !/^image\/(jpeg|png|webp)$/.test(f.type);
+    return new Promise(function (res) {
+      var url, img = new Image();
+      function fallback() { try { URL.revokeObjectURL(url); } catch (e) {} res({ blob: f, name: f.name || 'resit' }); }
+      img.onerror = fallback;
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, 1600 / Math.max(w, h || 1));
+          if (!w || !h || (k === 1 && !odd && f.size <= 1.5 * 1048576)) return fallback();
+          var c = document.createElement('canvas');
+          c.width = Math.round(w * k); c.height = Math.round(h * k);
+          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+          g.drawImage(img, 0, 0, c.width, c.height);
+          c.toBlob(function (b) {
+            try { URL.revokeObjectURL(url); } catch (e) {}
+            if (!b) return res({ blob: f, name: f.name || 'resit' });
+            res({ blob: b, name: String(f.name || 'resit').replace(/\.[^.]*$/, '') + '.jpg' });
+          }, 'image/jpeg', 0.85);
+        } catch (e) { fallback(); }
+      };
+      try { url = URL.createObjectURL(f); img.src = url; } catch (e) { res({ blob: f, name: f.name || 'resit' }); }
+    });
+  }
+
+  function upload(fd) {
+    return new Promise(function (res) {
+      var x = new XMLHttpRequest();
+      x.open('POST', Live.API);
+      x.timeout = 180000;
+      x.upload.onprogress = function (ev) {
+        if (ev.lengthComputable) $('oSend').textContent = 'Menghantar… ' + Math.min(99, Math.round(ev.loaded / ev.total * 100)) + '%';
+      };
+      x.onload = function () {
+        var j = null; try { j = JSON.parse(x.responseText); } catch (e) {}
+        if (x.status === 413 || x.status === 401) return res({ ok: false, error: 'Fail resit terlalu besar. Cuba gambar yang lebih kecil.' });
+        res(j && typeof j === 'object' ? j : { ok: false, error: 'Ralat di server. Cuba lagi.' });
+      };
+      x.onerror = function () { res({ ok: false, error: 'Sambungan gagal. Semak internet anda dan cuba lagi.' }); };
+      x.ontimeout = function () { res({ ok: false, error: 'Penghantaran terlalu lama. Cuba lagi.' }); };
+      x.send(fd);
+    });
+  }
+
+  function setSending(on, label) {
+    sending = on;
+    var b = $('oSend');
+    b.disabled = on; b.setAttribute('aria-busy', on ? 'true' : 'false');
+    b.textContent = label || 'Hantar bidaan';
+    if (!on) validate();
+  }
+
+  $('oForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (sending) return;
+    var err = $('oErr'), s = cur$ || {};
+    var name = $('oName').value.trim().replace(/\s+/g, ' '), phone = $('oPhone').value.trim(), amt = parseAmt($('oAmt').value);
+    var fail = function (msg, el) { err.textContent = msg; if (el) el.focus(); };
+    err.textContent = '';
+    if (!onlineForm) return fail('Bidaan online untuk item ini tidak dibuka.');
+    if (!name) return fail('Masukkan nama penuh.', $('oName'));
+    if (phone.replace(/\D/g, '').length < 9) return fail('Masukkan nombor telefon yang sah.', $('oPhone'));
+    if (amt < minOnline()) return fail('Jumlah mesti sekurang-kurangnya ' + money(minOnline()) + '.', $('oAmt'));
+    if (!pickedFile) return fail('Sila lampirkan resit yuran.', $('oFile'));
+
+    var lotTitle = titleOf(s.lot || {}), lotId = s.activeId;
+    setSending(true, 'Menghantar…');
+    prepFile(pickedFile).then(function (f) {
+      if (f.blob.size > MAX_FILE) return { ok: false, error: 'Fail resit terlalu besar (maksimum 10MB).' };
+      var fd = new FormData();
+      fd.append('action', 'submitBid'); fd.append('name', name); fd.append('phone', phone);
+      fd.append('lotId', lotId); fd.append('amount', String(amt));
+      fd.append('receipt', f.blob, f.name);
+      return upload(fd);
+    }).then(function (j) {
+      if (!j || !j.ok || !j.id) { setSending(false); err.textContent = (j && j.error) || 'Bidaan tidak dapat dihantar. Cuba lagi.'; return; }
+      lsSet(ME_KEY, { name: name, phone: phone });
+      subs.unshift({ id: String(j.id), amount: amt, lotTitle: lotTitle, at: Math.floor(Date.now() / 1000), status: 'new', reason: '' });
+      saveSubs();
+      cardId = String(j.id);
+      $('oAmt').value = ''; $('oFile').value = ''; pickedFile = null; showPreview(null);
+      setSending(false);
+      renderBox();
+      $('oCard').scrollIntoView({ block: 'nearest' });
+      if (watcher && watcher.refresh) watcher.refresh();
+    }).catch(function () { setSending(false); err.textContent = 'Bidaan tidak dapat dihantar. Cuba lagi.'; });
+  });
+
+  $('oAgain').addEventListener('click', function () {
+    cardId = ''; renderBox(); validate();
+    $('oAmt').focus();
+  });
+
+  /* poll my unresolved online bids every 5s */
+  var polling = false;
+  function pollSubs() {
+    if (polling || document.hidden) return;
+    var open = subs.filter(function (x) { return x.status === 'new'; });
+    if (!open.length) return;
+    polling = true;
+    var changed = false;
+    Promise.all(open.map(function (x) {
+      return fetch(Live.API + '?sub=' + encodeURIComponent(x.id) + '&_=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.status === 404 ? { gone: true } : r.json(); })
+        .then(function (j) {
+          if (j && j.gone) { x.status = 'gone'; changed = true; }
+          else if (j && j.ok && j.status && j.status !== x.status) { x.status = String(j.status); x.reason = String(j.reason || ''); changed = true; }
+        })
+        .catch(function () { /* try again next round */ });
+    })).then(function () {
+      polling = false;
+      if (changed) { saveSubs(); renderBox(); }
+    });
+  }
+  setInterval(pollSubs, 5000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) pollSubs(); });
+  pollSubs();
+  renderBox();
+
+  var watcher = Live.watch(render, onConn, 2000);
 })();
 </script>
 </body>

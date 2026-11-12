@@ -80,6 +80,11 @@
   .list li:first-child .t { color: var(--grey); }
   .list li.new { animation: rowhit 2.2s ease-out; }
   @keyframes rowhit { 0%, 25% { background: var(--warm-bg); } 100% { background: transparent; } }
+  /* a bid that came in online (approved by the admin): quiet tag after the name */
+  .list li.on .who { display: flex; align-items: baseline; gap: calc(var(--u) * 1.2); }
+  .list .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .list .tag { flex: none; padding: .3em .6em .25em; border: 1px solid var(--hair); border-radius: 4px; font-size: .52em; font-weight: 500; line-height: 1; letter-spacing: .1em; text-transform: uppercase; color: var(--grey); }
+  .pend { margin-top: calc(var(--u) * 1.4); font-size: calc(var(--u) * 2.1); color: var(--grey); }
 
   /* draft / closed-without-bids */
   .wait-h { font-family: var(--display); font-weight: 300; font-size: calc(var(--u) * 7.4); line-height: 1.05; max-width: 14em; text-wrap: balance; }
@@ -156,6 +161,9 @@
     .list .who { grid-area: who; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
     .list .t { grid-area: t; font-size: 13px; }
     .list .amt { grid-area: amt; align-self: center; min-width: 0; white-space: nowrap; }
+    .list li.on .who { display: block; }
+    .list .tag { display: inline-block; margin-left: 8px; vertical-align: 2px; font-size: 10px; }
+    .pend { margin-top: 12px; font-size: 14px; }
 
     .wait-h { font-size: clamp(30px, 9vw, 42px); line-height: 1.08; }
     .wait-p { margin-top: 28px; }
@@ -201,9 +209,110 @@
     .win-pay { width: min(100%, 720px); }
     .win-pay dl { grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 20px; }
   }
+
+  /* ---------- phone, portrait ----------
+   * A scoreboard designed for the phone rather than the projector page stacked up: sticky top bar
+   * with the status, a small item block, then the price as the one big thing. Everything sits on
+   * one 20px left edge. This is every compact shape except the sideways phone above. */
+  .m-bar, .m-item, .pay-h { display: none; }
+  @media (max-aspect-ratio: 1/1), (max-width: 760px) and (max-aspect-ratio: 4/3), (max-width: 760px) and (min-height: 501px) {
+    :root { --hair: #2a2b2f; --edge: 20px; --big: min(28vw, 132px); }
+    body { font-size: 16px; line-height: 1.4; }
+    .screen { min-height: 0; }
+    .split, .win { display: block; }
+    .photo, .photo.noimg, .panel > .top, .win > .top, .win-lot { display: none; }
+
+    /* top bar */
+    .m-bar { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: env(safe-area-inset-top) var(--edge) 0; background: var(--bg); border-bottom: 1px solid var(--hair); }
+    .m-org { min-width: 0; font-size: 13px; letter-spacing: .02em; color: var(--grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .m-st { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px 0 10px; border: 1px solid var(--hair); border-radius: 14px; font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: .12em; text-transform: uppercase; color: var(--grey); }
+    .m-st::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--grey); }
+    .m-st.open, .m-st.closed { color: var(--fg); }
+    .m-st.open::before { background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
+    .m-st.closed::before { background: var(--fg); }
+
+    /* the item on sale */
+    .m-item { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; align-items: start; padding: 20px var(--edge); border-bottom: 1px solid var(--hair); }
+    .m-thumb { position: relative; aspect-ratio: 3 / 4; border-radius: 4px; overflow: hidden; background: #111214; }
+    .m-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 45%; }
+    .m-noimg { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; padding: 8px; text-align: center; font-size: 11px; line-height: 1.3; color: var(--grey); }
+    .m-thumb.noimg img { display: none; }
+    .m-thumb.noimg .m-noimg { display: flex; }
+    .m-title { font-family: var(--display); font-weight: 400; font-size: 19px; line-height: 1.22; letter-spacing: 0; text-wrap: pretty; overflow-wrap: anywhere; }
+    .m-event { margin-top: 8px; font-size: 13px; line-height: 1.45; color: var(--grey); }
+    .m-event .nw { white-space: nowrap; }
+
+    /* auction */
+    .panel { display: block; padding: 0 var(--edge); }
+    .body { padding: 28px 0 0; }
+    .lbl { font-size: 13px; letter-spacing: .02em; }
+    .price-box { margin: 0; padding: 0; border-radius: 0; }
+    .price, .wait-price, .win-amt { font-size: var(--big); line-height: .9; letter-spacing: -.015em; }
+    .price { margin-top: 10px; }
+    .price .cur, .wait-price .cur, .win-amt .cur { font-size: .25em; letter-spacing: .04em; margin-right: .24em; vertical-align: baseline; }
+    .leader { margin-top: 14px; font-size: 24px; line-height: 1.2; max-height: calc(2 * 1.2em); }
+    .next { margin-top: 4px; font-size: 15px; }
+    .next:empty { display: none; }
+    .price-box.hit { animation: none; }   /* no box: only the number and name turn warm */
+
+    .recent { margin-top: 40px; }
+    .recent .lbl { padding-bottom: 10px; }
+    /* name over time; an online bid's tag sits on the time line, the amount on the right */
+    .list li { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "who who amt" "t tag amt"; min-height: 60px; padding: 11px 0; column-gap: 12px; row-gap: 3px; font-size: 17px; }
+    .list li.on .who { display: contents; }
+    .list .nm { grid-area: who; overflow-wrap: anywhere; }
+    .list .tag { grid-area: tag; justify-self: start; align-self: center; margin: 0; padding: 3px 6px 2px; }
+    .list .t { font-size: 12px; }
+    .list li.new { animation: rowtxt 2.2s ease-out; }
+    @keyframes rowtxt { 0%, 35% { color: var(--warm); } }
+    .pend { margin-top: 14px; font-size: 13px; }
+
+    /* draft */
+    .wait-h { font-size: clamp(30px, 9.4vw, 40px); line-height: 1.08; max-width: 11em; }
+    .wait-p { margin-top: 36px; }
+    .wait-price { margin-top: 10px; }
+    .wait-inc { margin-top: 12px; font-size: 15px; }
+
+    .foot { margin-top: 48px; padding: 20px 0 calc(28px + env(safe-area-inset-bottom)); gap: 6px; font-size: 13px; line-height: 1.5; }
+    .foot p:last-child { color: var(--grey); }
+
+    /* winner */
+    .win { padding: 28px var(--edge) calc(32px + env(safe-area-inset-bottom)); }
+    .win-main { display: block; padding: 0; text-align: left; }
+    .win-hi { font-size: 13px; font-family: var(--font); font-weight: 400; letter-spacing: .02em; line-height: 1.4; }
+    .win-name { margin-top: 6px; font-size: clamp(34px, 10.8vw, 46px); line-height: 1.08; max-height: calc(2 * 1.08em); text-wrap: pretty; }
+    .win-amt { margin-top: 10px; }
+    .win-note { margin-top: 18px; font-size: 14px; line-height: 1.5; }
+    .win-pay { width: auto; margin-top: 36px; padding-top: 0; border-top: 0; }
+    .pay-h { display: block; padding-bottom: 10px; border-bottom: 1px solid var(--hair); font-size: 13px; color: var(--grey); }
+    .win-pay dl { grid-template-columns: 100%; gap: 0; }
+    .win-pay dl > div { padding: 12px 0; border-bottom: 1px solid var(--hair); }
+    .win-pay dt { font-size: 12px; }
+    .win-pay dd { margin-top: 2px; font-size: 18px; line-height: 1.3; }
+    .win-pay .note { margin-top: 12px; font-size: 14px; line-height: 1.5; }
+    .win-paid { width: auto; margin-top: 36px; padding: 14px 0; border-bottom: 1px solid var(--hair); text-align: left; font-size: 16px; }
+
+    /* full screen button (Android only; hidden where unsupported): sits at the end of the page */
+    .fs { position: static; display: block; margin: 0 var(--edge) 32px; min-height: 44px; }
+    body.idle .fs { opacity: 1; pointer-events: auto; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .m-st.open::before, .price-box.hit .price, .price-box.hit .leader, .list li.new { animation: none; }
+    }
+  }
 </style>
 </head>
 <body>
+
+<!-- phone only (hidden on the projector): status bar + the item on sale -->
+<header class="m-bar">
+  <p class="m-org" id="mOrg"></p>
+  <p class="m-st" id="mSt"></p>
+</header>
+<div class="m-item">
+  <div class="m-thumb" id="mThumb"><img id="mImg" alt=""><span class="m-noimg">Tiada gambar</span></div>
+  <div><h2 class="m-title" id="mTitle"></h2><p class="m-event" id="mEvent"></p></div>
+</div>
 
 <section class="screen split" id="split" aria-live="polite">
   <figure class="photo" id="photoBox">
@@ -236,6 +345,7 @@
         <h2 class="lbl">Bidaan terkini</h2>
         <ol class="list" id="list"></ol>
       </section>
+      <p class="pend" id="pend" hidden></p>
     </div>
 
     <div class="body" id="emptyBody" hidden>
@@ -281,6 +391,9 @@
   const featuredSrc = firstImg ? firstImg.src : (L.hero || img.getAttribute('src'));
   const featuredAlt = firstImg ? (firstImg.alt || '') : '';
   $('org').textContent = L.org || '';
+  $('mOrg').textContent = L.org || '';
+  // keep "Ke-16" on one line in the narrow item block
+  $('mEvent').innerHTML = esc(L.event || '').replace(/\S+-\S+/g, '<span class="nw">$&</span>');
   $('event').textContent = L.event || '';
   $('winEvent').textContent = L.event || '';
   $('benef').textContent = L.beneficiary || '';
@@ -296,6 +409,15 @@
     img.alt = alt;
   }
   img.addEventListener('error', () => { photoBox.classList.add('noimg'); img.hidden = true; });
+  // Phone item block: small photo, or a plain tile when the item has none.
+  const mImg = $('mImg'), mThumb = $('mThumb');
+  function setThumb(src, alt) {
+    mThumb.classList.toggle('noimg', !src);
+    if (src && mImg.getAttribute('src') !== src) mImg.src = src;
+    if (!src) mImg.removeAttribute('src');
+    mImg.alt = alt;
+  }
+  mImg.addEventListener('error', () => mThumb.classList.add('noimg'));
   let shownLot;
   function showLot(s) {
     const lot = s.lot || {}, featured = !s.lot || !!lot.featured;
@@ -306,6 +428,8 @@
     $('lotTitle').textContent = title;
     $('winLot').textContent = featured ? (L.shortTitle || title) : title;
     setPhoto(featured ? featuredSrc : (lot.image || ''), featured ? featuredAlt : title);
+    $('mTitle').textContent = title;
+    setThumb(featured ? featuredSrc : (lot.image || ''), featured ? featuredAlt : title);
   }
 
   /* Shrink an element's font until it fits its box (width, and max-height for 2-line names). */
@@ -349,6 +473,9 @@
     const lotSwitched = prevActive !== undefined && s.activeId !== prevActive;
     prevActive = s.activeId;
     showLot(s);
+    const mst = $('mSt');
+    mst.className = 'm-st' + (s.status === 'open' ? ' open' : s.status === 'closed' ? ' closed' : '');
+    mst.textContent = s.status === 'open' ? 'Langsung' : s.status === 'closed' ? 'Ditutup' : 'Belum dibuka';
 
     if (s.status === 'closed' && winner) {
       show('win');
@@ -362,7 +489,7 @@
         $('winPaid').hidden = true;
         if (String(p.accNo || '').trim()) {
           const rows = [['Bank', p.bank], ['Nama akaun', p.accName], ['No. akaun', p.accNo]].filter(r => String(r[1] || '').trim());
-          pay.innerHTML = '<dl style="--cols:' + rows.length + '">' +
+          pay.innerHTML = '<p class="pay-h">Butiran bayaran</p><dl style="--cols:' + rows.length + '">' +
             rows.map(r => '<div><dt>' + esc(r[0]) + '</dt><dd' + (r[0] === 'No. akaun' ? ' class="num"' : '') + '>' + esc(r[1]) + '</dd></div>').join('') + '</dl>' +
             (String(p.note || '').trim() ? '<p class="note">' + esc(p.note) + '</p>' : '');
           pay.hidden = false;
@@ -405,9 +532,15 @@
       const recent = bids.slice(-5).reverse();
       $('recent').hidden = !recent.length;
       $('list').innerHTML = recent.map(b =>
-        '<li data-id="' + esc(b.id) + '"><span class="who">' + esc(b.name) + '</span>' +
+        '<li data-id="' + esc(b.id) + '"' + (b.online ? ' class="on"' : '') + '><span class="who">' +
+        (b.online ? '<span class="nm">' + esc(b.name) + '</span><span class="tag">Online</span>' : esc(b.name)) + '</span>' +
         '<span class="t num">' + esc(Live.time(b.at)) + '</span>' +
         '<span class="amt num">' + esc(Live.money(b.amount)) + '</span></li>').join('');
+
+      // Online bids the admin has not checked yet (deposit receipt under review).
+      const pend = Number(s.pendingCount) || 0;
+      $('pend').hidden = !pend;
+      $('pend').textContent = pend ? pend + ' bidaan online sedang disemak' : '';
 
       // A new highest bid: make it obvious from the back of the hall.
       // (After an undo the new top is a bid we have already seen, so no flash.)

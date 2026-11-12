@@ -8,11 +8,17 @@
  *   pin.txt      admin PIN (a random 6-digit PIN is created on first run)
  *   img/         item photos uploaded by the admin, served by GET api.php?img=<lotId>
  *   backups/     copy of the state before every reset
+ *   receipts/    deposit receipts attached to online bids (admin only: GET api.php?receipt=<id> with X-Pin)
  *
  * GET  api.php?v=<version>   -> { ok, same:true } when unchanged, else { ok, state } (public, no phones)
  * GET  api.php?img=<lotId>   -> item photo
  * POST api.php {action,...}  header X-Pin -> admin actions -> { ok, state } (admin view, with phones)
  *      Item photo upload: multipart/form-data with action=uploadImage, lotId, image=<file>.
+ * ONLINE BIDS (public, no PIN): POST multipart action=submitBid: name, phone, lotId, amount, receipt=<file>
+ *      -> { ok, id }. Rate-limited per IP. The bid waits in a queue; it is NOT shown until the admin checks the
+ *      deposit receipt and approves it (action=reviewBid {id, decision:'approve'|'reject', reason?}).
+ *      The guest polls GET api.php?sub=<id> -> { ok, status:'new'|'ok'|'rejected', reason, amount, lotTitle }.
+ *      Approved online bids are normal bids with online:true.
  *
  * State (public view): the ACTIVE item's auction fields sit at the top level, so a page that only
  * knows one item keeps working: status, startPrice, increment, minNext, bids, winner, paid,
@@ -45,6 +51,20 @@ if (isset($_GET['img'])) {
   readfile($f); exit;
 }
 
+// ---- receipt file (admin only; the page fetches it with the X-Pin header and shows a blob) ----
+if (isset($_GET['receipt'])) {
+  $pin = trim((string) @file_get_contents($PIN_FILE));
+  $given = trim((string) ($_SERVER['HTTP_X_PIN'] ?? ''));
+  if ($pin === '' || $given === '' || !hash_equals($pin, $given)) { sleep(2); http_response_code(401); exit; }
+  $id = preg_replace('/[^a-zA-Z0-9]/', '', (string) $_GET['receipt']);
+  $f = $id !== '' ? (glob($DATA_DIR . '/receipts/' . $id . '.*')[0] ?? null) : null;
+  if (!$f) { http_response_code(404); exit; }
+  $types = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf'];
+  header('Content-Type: ' . ($types[pathinfo($f, PATHINFO_EXTENSION)] ?? 'application/octet-stream'));
+  header('Cache-Control: private, no-store');
+  readfile($f); exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, max-age=0');
 header('X-Robots-Tag: noindex');
@@ -65,13 +85,14 @@ function seed(): array {
   return [
     'version' => 0, 'activeId' => 'nikaziz',
     'lots' => [newLot('nikaziz', 'Baju Almarhum Tuan Guru Nik Abdul Aziz Nik Mat', '', 30000, 0, true)],
-    'payment' => ['bank' => '', 'accName' => '', 'accNo' => '', 'note' => ''],
+    'payment' => ['bank' => '', 'accName' => '', 'accNo' => '', 'note' => '', 'wa' => '', 'deposit' => 10, 'onlineOn' => true],   // deposit = online bid fee (RM) set by the admin
+    'pending' => [],                  // online bids waiting for review: [{id,lotId,lotTitle,name,phone,amount,file,type,at,status,reason,reviewedAt}]
     'updatedAt' => time(),
   ];
 }
 // Older one-item state files had the auction fields at the top level.
 function migrate(array $s): array {
-  if (isset($s['lots'])) return $s;
+  if (isset($s['lots'])) { $s['pending'] = $s['pending'] ?? []; $s['payment'] = ($s['payment'] ?? []) + ['bank' => '', 'accName' => '', 'accNo' => '', 'note' => '', 'wa' => '', 'deposit' => 10, 'onlineOn' => true]; return $s; }
   $n = seed();
   $lot = &$n['lots'][0];
   foreach (['status', 'startPrice', 'increment', 'bids', 'winner', 'paid', 'openedAt', 'closedAt'] as $k) if (array_key_exists($k, $s)) $lot[$k] = $s[$k];
@@ -82,6 +103,12 @@ function migrate(array $s): array {
 function minNext(array $l): int {
   $n = count($l['bids']);
   return $n ? (int) $l['bids'][$n - 1]['amount'] + max(1, (int) $l['increment']) : (int) $l['startPrice'];
+}
+// Online bids must beat the current highest AND every online bid still waiting for review on the same item.
+function minOnline(array $s, array $l): int {
+  $m = minNext($l);
+  foreach ($s['pending'] ?? [] as $r) if ($r['status'] === 'new' && $r['lotId'] === $l['id']) $m = max($m, (int) $r['amount'] + max(1, (int) $l['increment']));
+  return $m;
 }
 function lotIndex(array $s, string $id): int {
   foreach ($s['lots'] as $i => $l) if ($l['id'] === $id) return $i;
@@ -100,7 +127,7 @@ function lotPublic(array $l): array {
 function view(array $s, bool $admin): array {
   $i = lotIndex($s, (string) $s['activeId']);
   $a = $s['lots'][max(0, $i)];
-  $bids = $admin ? $a['bids'] : array_map(fn($b) => ['id' => $b['id'], 'name' => $b['name'], 'amount' => $b['amount'], 'at' => $b['at']], $a['bids']);
+  $bids = $admin ? $a['bids'] : array_map(fn($b) => ['id' => $b['id'], 'name' => $b['name'], 'amount' => $b['amount'], 'at' => $b['at'], 'online' => !empty($b['online'])], $a['bids']);
   $winner = $a['winner']; if ($winner && !$admin) unset($winner['phone']);
   $paid = $a['paid']; if ($paid && !$admin) $paid = ['at' => $paid['at']];
   $v = [
@@ -111,6 +138,9 @@ function view(array $s, bool $admin): array {
     'lots' => $admin ? array_map(fn($l) => $l + ['minNext' => minNext($l)], $s['lots']) : array_map('lotPublic', $s['lots']),
     'payment' => $s['payment'], 'updatedAt' => $s['updatedAt'], 'serverTime' => time(),
   ];
+  $v['minOnline'] = minOnline($s, $a);
+  $v['pendingCount'] = count(array_filter($s['pending'] ?? [], fn($r) => $r['status'] === 'new' && $r['lotId'] === $a['id']));
+  if ($admin) $v['pending'] = array_map(fn($r) => array_diff_key($r, ['file' => 1]), array_reverse($s['pending'] ?? []));
   return $v;
 }
 
@@ -122,10 +152,61 @@ $raw = stream_get_contents($fh);
 $state = $raw ? json_decode($raw, true) : null;
 $state = is_array($state) ? migrate($state) : seed();
 
+if (!$isPost && isset($_GET['sub'])) {   // a guest checks their own online bid (the id is the secret)
+  flock($fh, LOCK_UN);
+  foreach ($state['pending'] as $r) if ($r['id'] === (string) $_GET['sub'])
+    out(['ok' => true, 'status' => $r['status'], 'reason' => $r['reason'] ?? '', 'amount' => $r['amount'], 'lotTitle' => $r['lotTitle'], 'at' => $r['at']]);
+  fail('Tidak dijumpai.', 404);
+}
 if (!$isPost) {
   flock($fh, LOCK_UN);
   if (isset($_GET['v']) && (int) $_GET['v'] === (int) $state['version'] && $raw) out(['ok' => true, 'same' => true, 'version' => $state['version']]);
   out(['ok' => true, 'state' => view($state, false)]);
+}
+
+// A multipart request bigger than post_max_size arrives with no fields at all: say so before the PIN check.
+if (stripos((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data') !== false && !$_POST && !$_FILES) {
+  flock($fh, LOCK_UN); fail('Fail terlalu besar untuk dimuat naik. Cuba gambar yang lebih kecil.', 413);
+}
+
+// ---- public: online bid with a deposit receipt (no PIN); waits for the admin's review ----
+if (($_POST['action'] ?? '') === 'submitBid') {
+  if (empty($state['payment']['onlineOn'])) fail('Bidaan online ditutup buat masa ini.');
+  $ip = (string) ($_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '?');
+  $rlFile = $DATA_DIR . '/ratelimit.json';
+  $rl = json_decode((string) @file_get_contents($rlFile), true) ?: [];
+  $now = time(); $key = hash('sha256', $ip);
+  $rl = array_filter(array_map(fn($ts) => array_values(array_filter($ts, fn($t) => $t > $now - 600)), $rl));
+  if (count($rl[$key] ?? []) >= 30) fail('Terlalu banyak bidaan dihantar dari peranti ini. Cuba lagi dalam beberapa minit.', 429);
+  if (count($state['pending']) >= 2000) fail('Had bidaan online telah dicapai. Sila hubungi urus setia.');
+  $name = clean((string) ($_POST['name'] ?? ''), 61);
+  $phone = trim((string) preg_replace('/[^0-9+\- ]/', '', (string) ($_POST['phone'] ?? '')));
+  $amount = (int) round((float) ($_POST['amount'] ?? 0));
+  $lidx = lotIndex($state, (string) ($_POST['lotId'] ?? ''));
+  if ($name === '' || mb_strlen($name) > 60) fail('Masukkan nama penuh (maksimum 60 aksara).');
+  if (strlen((string) preg_replace('/\D/', '', $phone)) < 9) fail('Masukkan nombor telefon yang sah.');
+  if ($lidx < 0) fail('Item tidak dijumpai. Muat semula halaman.');
+  $lot = $state['lots'][$lidx];
+  if ($lot['status'] !== 'open') fail('Bidaan untuk item ini belum dibuka atau sudah ditutup.');
+  $min = minOnline($state, $lot);
+  if ($amount < $min) fail('Jumlah mesti lebih tinggi daripada bidaan semasa dan bidaan online yang sedang disemak: sekurang-kurangnya RM' . number_format($min) . '.');
+  if ($amount > 50000000) fail('Jumlah terlalu besar. Semak semula.');
+  $f = $_FILES['receipt'] ?? null;
+  if (!$f) fail('Sila lampirkan gambar resit deposit.');
+  if (in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true) || $f['size'] > 10 * 1024 * 1024) fail('Fail resit terlalu besar. Cuba gambar yang lebih kecil.');
+  if ($f['error'] !== UPLOAD_ERR_OK) fail('Muat naik resit gagal. Cuba lagi.');
+  $mime = (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
+  $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'][$mime] ?? null;
+  if (!$ext) fail('Resit mesti gambar (JPG, PNG, WEBP) atau PDF.');
+  @mkdir($DATA_DIR . '/receipts', 0700, true);
+  $id = bin2hex(random_bytes(8));
+  if (!move_uploaded_file($f['tmp_name'], $DATA_DIR . '/receipts/' . $id . '.' . $ext)) fail('Tidak dapat simpan resit.', 500);
+  $state['pending'][] = ['id' => $id, 'lotId' => $lot['id'], 'lotTitle' => $lot['title'], 'name' => $name, 'phone' => mb_substr($phone, 0, 20),
+    'amount' => $amount, 'file' => $id . '.' . $ext, 'type' => $ext, 'at' => $now, 'status' => 'new', 'reason' => '', 'reviewedAt' => null];
+  $rl[$key][] = $now; @file_put_contents($rlFile, json_encode($rl));
+  $state['version'] = (int) $state['version'] + 1; $state['updatedAt'] = $now;
+  ftruncate($fh, 0); rewind($fh); fwrite($fh, json_encode($state, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); fflush($fh); flock($fh, LOCK_UN);
+  out(['ok' => true, 'id' => $id]);
 }
 
 // ---- admin auth ----
@@ -176,6 +257,10 @@ switch ($action) {
     $last = $L['bids'][count($L['bids']) - 1];
     if (!empty($in['id']) && $in['id'] !== $last['id']) fail('Bidaan terakhir sudah berubah. Semak senarai semula.');
     array_pop($L['bids']);
+    if (!empty($last['sub'])) foreach ($S['pending'] as &$r) {   // an approved online bid was undone: tell the guest
+      if ($r['id'] === $last['sub']) { $r['status'] = 'rejected'; $r['reason'] = 'Dibatalkan oleh urus setia'; $r['reviewedAt'] = time(); }
+    }
+    unset($r);
     break;
 
   case 'close':
@@ -208,8 +293,16 @@ switch ($action) {
     if (($sp !== (int) $L['startPrice'] || $inc !== (int) $L['increment']) && $L['bids']) fail('Harga mula dan kenaikan tidak boleh diubah selepas ada bidaan.');
     if ($sp < 1 || $inc < 0) fail('Harga mula mesti lebih daripada 0, dan kenaikan tidak boleh negatif.');
     $L['startPrice'] = $sp; $L['increment'] = $inc;
+    if (array_key_exists('deposit', $in)) { $dep = (int) $in['deposit']; if ($dep < 0) fail('Deposit tidak boleh negatif.'); $S['payment']['deposit'] = $dep; }
+    if (array_key_exists('onlineOn', $in)) $S['payment']['onlineOn'] = (bool) $in['onlineOn'];
     foreach (['bank', 'accName', 'accNo', 'note'] as $k) {
       if (array_key_exists($k, $in)) $S['payment'][$k] = clean((string) $in[$k], 160);
+    }
+    if (array_key_exists('wa', $in)) {   // WhatsApp number for online bids, stored as digits with country code (60…)
+      $d = preg_replace('/\D/', '', (string) $in['wa']);
+      if ($d !== '' && $d[0] === '0') $d = '6' . $d;
+      if ($d !== '' && (strlen($d) < 10 || strlen($d) > 15)) fail('Nombor WhatsApp tidak sah.');
+      $S['payment']['wa'] = $d;
     }
     break;
 
@@ -270,6 +363,26 @@ switch ($action) {
     $L['image'] = '';
     break;
 
+  case 'reviewBid':   // approve = becomes a real bid now (must still beat the current highest); reject = with a reason
+    $pi = -1; foreach ($S['pending'] as $i => $r) if ($r['id'] === ($in['id'] ?? '')) $pi = $i;
+    if ($pi < 0) fail('Bidaan online tidak dijumpai.');
+    $P = &$S['pending'][$pi];
+    if ($P['status'] !== 'new') fail('Bidaan ini sudah disemak.');
+    if (($in['decision'] ?? '') === 'reject') {
+      $P['status'] = 'rejected'; $P['reason'] = clean((string) ($in['reason'] ?? ''), 160); $P['reviewedAt'] = time();
+    } elseif (($in['decision'] ?? '') === 'approve') {
+      $ri = lotIndex($S, $P['lotId']);
+      if ($ri < 0) fail('Item bidaan ini sudah dipadam.');
+      $T = &$S['lots'][$ri];
+      if ($T['status'] !== 'open') fail('Bidaan item ini sudah ditutup. Tolak bidaan ini dengan sebab.');
+      if ($P['amount'] < minNext($T)) fail('Jumlah RM' . number_format($P['amount']) . ' sudah dilepasi oleh bidaan semasa. Tolak dengan sebab "sudah dilepasi".');
+      $T['bids'][] = ['id' => bin2hex(random_bytes(4)), 'name' => $P['name'], 'phone' => $P['phone'], 'amount' => $P['amount'], 'at' => time(), 'online' => true, 'sub' => $P['id']];
+      unset($T);
+      $P['status'] = 'ok'; $P['reviewedAt'] = time();
+    } else fail('Keputusan tidak sah.');
+    unset($P);
+    break;
+
   case 'reset':   // clears bidding on every item; keeps the items, prices and payment details
     if (($in['confirm'] ?? '') !== 'RESET') fail('Taip RESET untuk sahkan.');
     @mkdir($DATA_DIR . '/backups', 0700, true);
@@ -278,6 +391,8 @@ switch ($action) {
     foreach ($S['lots'] as &$l) { $l['status'] = 'draft'; $l['bids'] = []; $l['winner'] = null; $l['paid'] = null; $l['openedAt'] = null; $l['closedAt'] = null; }
     unset($l);
     $S['activeId'] = $S['lots'][0]['id'];
+    $S['pending'] = [];
+    foreach (glob($DATA_DIR . '/receipts/*') ?: [] as $old) @rename($old, $DATA_DIR . '/backups/' . basename($old));
     break;
 
   default:
