@@ -1,48 +1,38 @@
-# eBid Baju
+# eBid Majlis: PAS Kawasan Kota Bharu
 
-Static HTML demo of a white-label online auction platform, with rules adapted from JPJeBid:
-- an open live auction
-- tier minimum price + minimum increment, with the increment doubled in the last 30 minutes
-- an RM10 participation fee on a bidder's first bid per lot
-- a win limit per bidder
-- the winner pays within a set time, or the lot passes to the second-highest bidder
+A live hall auction for one lot: the vest of Almarhum Tuan Guru Nik Abdul Aziz Nik Mat,
+at the Majlis Makan Malam Kutipan Dana PRU Ke-16. Starting price RM30,000, increment RM500.
 
-Demo shop: **PAS Kawasan Kota Bharu**, Bidaan Istimewa at the Majlis Makan Malam Kutipan Dana PRU Ke-16.
+The MC runs the auction in the hall. A committee member types every bid (name and amount)
+in the admin page. Guests watch on their phones, and the projector shows the same data.
+There are no guest accounts, no online payment and no QR codes. Payment is checked by hand
+at the event.
 
-> Demo only. No real payments: the `pay/` pages are a sandbox mock of the Bayarcash payment page. All data lives in the browser's `localStorage`.
+| Page | Who | What |
+|---|---|---|
+| `/` | Guests (phone) | Story, photos, video, live price, bid list, winner |
+| `/skrin.html` | Projector | Big price, leader, last bids, winner screen |
+| `/admin/` | Committee (PIN) | Open/close, record bids, undo last, confirm payment, settings, CSV, reset |
+| `api.php` | All pages | Public GET state (pages poll it every 1.5 to 2 seconds); admin POST actions with the `X-Pin` header |
 
-## Run (realtime: bids appear live on every phone and laptop)
+## Data
+
+Data is kept outside the web folder, so RunCloud atomic deploys do not wipe it:
+`/home/<user>/ebid-data/` (or the `EBID_DATA` environment variable).
+
+- `state.json`: the auction, including bidder phone numbers (admin only)
+- `pin.txt`: the admin PIN. A random 6-digit PIN is made on the first request. To read or change it:
+  `ssh ebid@<server> 'cat ~/ebid-data/pin.txt'`
+- `backups/`: a copy of the state before every reset
+
+## Run locally
 
 ```bash
-node server.js
+EBID_DATA=/tmp/ebid-data php -S 127.0.0.1:8090
+# guest:     http://127.0.0.1:8090/
+# projector: http://127.0.0.1:8090/skrin.html
+# admin:     http://127.0.0.1:8090/admin/   (PIN in /tmp/ebid-data/pin.txt)
 ```
 
-Then open http://localhost:8080/shop.html. The server prints the address for phones on the same Wi-Fi (e.g. `http://192.168.x.x:8080/shop.html`).
-
-- `server.js` needs no packages.
-- It keeps one shared auction state.
-- It pushes every new bid to all devices with Server-Sent Events.
-- It picks one device to run the simulated bidders. Turn these off with `settings.demoBots: false` in `assets/data.js`.
-
-With a plain static server (`python3 -m http.server`, GitHub Pages) the demo still works, but each browser keeps its own data. The page shows "Paparan browser ini sahaja".
-
-## Pages
-
-| Area | Pages |
-|---|---|
-| Platform | `index.html` |
-| Bidder | `shop.html`, `item.html`, `login.html`, `my-bids.html`, `inbox.html`, `checkout.html`, `favourites.html`, `history.html`, `profile.html` |
-| Shop admin | `admin/index.html` (incl. the projector "Mod skrin besar"), `admin/items.html`, `admin/winners.html`, `admin/settings.html` |
-| Super admin | `super/index.html` |
-| Mock Bayarcash | `pay/bayarcash.html` → `pay/bank.html` → `pay/status.html` |
-
-On the mock bank page, the sandbox banks behave like this:
-
-| Bank | Result |
-|---|---|
-| SBI Bank A | success |
-| SBI Bank B | failed |
-| SBI Bank C | random |
-
-Shared code lives in `assets/`. Design direction: `DESIGN.md`.
-Use "Reset data demo" in the footer to start over.
+The full white-label demo (shops, RM10 fee, mock Bayarcash, bots) is kept in git history
+at commit `d48f3f8`.

@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Skrin bidaan · PAS Kawasan Kota Bharu</title>
+<link rel="stylesheet" href="assets/live.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@300&display=swap">
+<style>
+  /* Projector screen. One unit (--u) = 1% of the height of a 16:9 frame, so the layout keeps
+   * its proportions from 1280x720 to 4K, and shrinks to the width on narrower screens. */
+  :root {
+    --bg: #010205; --fg: #ffffff; --grey: #949598;
+    --hair: rgba(148, 149, 152, .28);
+    --warm: #e9c88f; --warm-bg: rgba(233, 200, 143, .16);
+    --u: min(1vh, .5625vw);
+  }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--fg); font-size: calc(var(--u) * 2); line-height: 1.3; }
+  body.idle, body.idle * { cursor: none !important; }
+  .grey { color: var(--grey); }
+  .lbl { font-size: calc(var(--u) * 2.1); color: var(--grey); letter-spacing: .02em; }
+
+  .screen { position: fixed; inset: 0; animation: fadein .6s ease-out; }
+  @keyframes fadein { from { opacity: 0; } }
+
+  /* ---------- split screen: photo left, auction right ---------- */
+  .split { display: grid; grid-template-columns: 40% 60%; }
+  .photo { position: relative; margin: 0; overflow: hidden; background: #000; }
+  .photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; max-width: none; }
+  .photo figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: calc(var(--u) * 3.2) calc(var(--u) * 4) calc(var(--u) * 3.6); background: rgba(1, 2, 5, .8); }
+  .photo .org { font-size: calc(var(--u) * 1.9); color: var(--grey); margin-bottom: calc(var(--u) * .8); }
+  .photo h1 { font-size: calc(var(--u) * 3.4); font-weight: 400; line-height: 1.15; }
+
+  .panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: calc(var(--u) * 4.4) calc(var(--u) * 6) calc(var(--u) * 3.6); }
+  .top { display: flex; flex-direction: column; gap: calc(var(--u) * 1.6); }
+  .event { font-size: calc(var(--u) * 1.9); color: var(--grey); line-height: 1.3; max-width: 60ch; }
+
+  .st { display: inline-flex; align-items: center; gap: calc(var(--u) * 1.3); font-size: calc(var(--u) * 2.8); font-weight: 500; color: var(--grey); }
+  .st::before { content: ''; flex: none; width: calc(var(--u) * 1.5); height: calc(var(--u) * 1.5); border-radius: 50%; background: var(--grey); }
+  .st.open { color: var(--fg); }
+  .st.open::before { background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
+  .st.closed { color: var(--fg); }
+  .st.closed::before { background: var(--fg); }
+
+  .body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+
+  /* price block */
+  .price-box { margin: 0 calc(var(--u) * -2.5); padding: calc(var(--u) * 1.4) calc(var(--u) * 2.5) calc(var(--u) * 1.8); border-radius: 8px; }
+  .price { font-family: var(--display); font-weight: 300; font-size: calc(var(--u) * 17); line-height: .95; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; transform-origin: left center; }
+  .price .cur { font-size: .42em; letter-spacing: 0; margin-right: .12em; color: var(--grey); vertical-align: .9em; }
+  .leader { margin-top: calc(var(--u) * 1.6); font-family: var(--display); font-weight: 400; font-size: calc(var(--u) * 5.6); line-height: 1.08; max-height: calc(2 * 1.08em); overflow: hidden; overflow-wrap: anywhere; }
+  .leader .by { color: var(--grey); font-weight: 300; }
+  .leader.none { color: var(--grey); font-weight: 300; }
+  .next { margin-top: calc(var(--u) * 2.4); font-size: calc(var(--u) * 3); color: var(--grey); }
+  .next b { color: var(--fg); font-weight: 500; }
+
+  .price-box.hit { animation: hitbg 2.2s ease-out; }
+  .price-box.hit .price { animation: hitnum 2.2s ease-out; }
+  .price-box.hit .leader { animation: hitname 2.2s ease-out; }
+  @keyframes hitbg { 0%, 25% { background: var(--warm-bg); } 100% { background: transparent; } }
+  @keyframes hitnum { 0% { transform: scale(1.06); color: var(--warm); } 35% { transform: scale(1); color: var(--warm); } 100% { color: var(--fg); } }
+  @keyframes hitname { 0%, 35% { color: var(--warm); } 100% { color: var(--fg); } }
+
+  /* recent bids */
+  .recent { margin-top: calc(var(--u) * 3); }
+  .recent .lbl { padding-bottom: calc(var(--u) * 1); border-bottom: 1px solid var(--hair); }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; gap: calc(var(--u) * 3); padding: calc(var(--u) * 1.05) 0; border-bottom: 1px solid var(--hair); font-size: calc(var(--u) * 2.5); line-height: 1.2; color: var(--grey); }
+  .list .who { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list .t { font-size: .82em; }
+  .list .amt { text-align: right; min-width: 6.5em; }
+  .list li:first-child { color: var(--fg); }
+  .list li:first-child .t { color: var(--grey); }
+  .list li.new { animation: rowhit 2.2s ease-out; }
+  @keyframes rowhit { 0%, 25% { background: var(--warm-bg); } 100% { background: transparent; } }
+
+  /* draft / closed-without-bids */
+  .wait-h { font-family: var(--display); font-weight: 300; font-size: calc(var(--u) * 7.4); line-height: 1.05; max-width: 14em; text-wrap: balance; }
+  .wait-p { margin-top: calc(var(--u) * 5); }
+  .wait-price { font-family: var(--display); font-weight: 300; font-size: calc(var(--u) * 13); line-height: 1; margin-top: calc(var(--u) * .8); white-space: nowrap; }
+  .wait-price .cur { font-size: .42em; color: var(--grey); margin-right: .12em; vertical-align: .9em; }
+  .wait-inc { margin-top: calc(var(--u) * 1.6); font-size: calc(var(--u) * 2.4); color: var(--grey); }
+
+  .foot { padding-top: calc(var(--u) * 2.2); border-top: 1px solid var(--hair); font-size: calc(var(--u) * 1.9); color: var(--grey); display: flex; justify-content: space-between; gap: calc(var(--u) * 4); }
+  .foot p:last-child { text-align: right; color: var(--fg); }
+
+  /* ---------- winner screen ---------- */
+  .win { display: flex; flex-direction: column; padding: calc(var(--u) * 5) calc(var(--u) * 7) calc(var(--u) * 4.5); }
+  .win-main { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .win-hi { font-family: var(--display); font-weight: 300; font-size: calc(var(--u) * 6); color: var(--grey); line-height: 1; }
+  .win-name { margin-top: calc(var(--u) * 2.4); font-family: var(--display); font-weight: 400; font-size: calc(var(--u) * 12); line-height: 1.04; max-width: 100%; max-height: calc(2 * 1.04em); overflow: hidden; overflow-wrap: anywhere; text-wrap: balance; }
+  .win-amt { margin-top: calc(var(--u) * 2.4); font-family: var(--display); font-weight: 300; font-size: calc(var(--u) * 11); line-height: 1; white-space: nowrap; }
+  .win-amt .cur { font-size: .42em; color: var(--grey); margin-right: .12em; vertical-align: .9em; }
+  .win-lot { margin-top: calc(var(--u) * 3.4); font-size: calc(var(--u) * 3); }
+  .win-note { margin-top: calc(var(--u) * .8); font-size: calc(var(--u) * 2.4); color: var(--grey); }
+  .win-pay { align-self: center; width: min(100%, calc(var(--u) * 150)); border-top: 1px solid var(--hair); padding-top: calc(var(--u) * 2.2); }
+  .win-pay dl { margin: 0; display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: calc(var(--u) * 4); }
+  .win-pay dt { font-size: calc(var(--u) * 1.9); color: var(--grey); }
+  .win-pay dd { margin: calc(var(--u) * .4) 0 0; font-size: calc(var(--u) * 3); line-height: 1.2; overflow-wrap: anywhere; }
+  .win-pay .note { margin-top: calc(var(--u) * 1.6); font-size: calc(var(--u) * 2.1); color: var(--grey); }
+  .win-paid { align-self: center; border-top: 1px solid var(--hair); padding-top: calc(var(--u) * 2.2); width: min(100%, calc(var(--u) * 150)); text-align: center; font-size: calc(var(--u) * 3.2); }
+
+  /* ---------- chrome ---------- */
+  .conn-x { position: fixed; z-index: 5; left: calc(var(--u) * 1.2); bottom: calc(var(--u) * 1.2); padding: calc(var(--u) * .5) calc(var(--u) * 1); border-radius: 4px; background: var(--bg); font-size: calc(var(--u) * 1.8); color: var(--grey); display: flex; align-items: center; gap: calc(var(--u) * .8); }
+  .conn-x::before { content: ''; width: calc(var(--u) * .9); height: calc(var(--u) * .9); border-radius: 50%; background: var(--live); }
+  .fs { position: fixed; top: calc(var(--u) * 2); right: calc(var(--u) * 2); z-index: 5; min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--grey); background: var(--bg); color: var(--fg); font: 400 14px/1 var(--font); cursor: pointer; transition: opacity .4s; }
+  .fs:hover { border-color: var(--fg); }
+  .fs:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  body.idle .fs { opacity: 0; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .screen, .price-box.hit, .price-box.hit .price, .list li.new { animation-duration: .01s; } }
+</style>
+</head>
+<body>
+
+<section class="screen split" id="split" aria-live="polite">
+  <figure class="photo">
+    <img id="photo" src="assets/img/nikaziz-vest-hanger.jpg" alt="">
+    <figcaption><p class="org" id="org"></p><h1 id="lotTitle"></h1></figcaption>
+  </figure>
+  <div class="panel">
+    <header class="top">
+      <p class="event" id="event"></p>
+      <p class="st" id="status" hidden></p>
+    </header>
+
+    <div class="body" id="draftBody" hidden>
+      <p class="wait-h">Bidaan akan bermula sebentar lagi</p>
+      <div class="wait-p">
+        <p class="lbl">Harga mula</p>
+        <p class="wait-price num" id="draftPrice"></p>
+        <p class="wait-inc num" id="draftInc"></p>
+      </div>
+    </div>
+
+    <div class="body" id="liveBody" hidden>
+      <div class="price-box" id="priceBox">
+        <p class="lbl" id="priceLbl"></p>
+        <p class="price num" id="price"></p>
+        <p class="leader" id="leader"></p>
+      </div>
+      <p class="next num" id="next"></p>
+      <section class="recent" id="recent" hidden>
+        <h2 class="lbl">Bidaan terkini</h2>
+        <ol class="list" id="list"></ol>
+      </section>
+    </div>
+
+    <div class="body" id="emptyBody" hidden>
+      <p class="wait-h">Bidaan ditutup tanpa bidaan.</p>
+    </div>
+
+    <footer class="foot"><p id="benef"></p><p id="slogan"></p></footer>
+  </div>
+</section>
+
+<section class="screen win" id="win" hidden aria-live="polite">
+  <header class="top">
+    <p class="event" id="winEvent"></p>
+    <p class="st closed">Bidaan ditutup</p>
+  </header>
+  <div class="win-main">
+    <p class="win-hi">Tahniah</p>
+    <h1 class="win-name" id="winName"></h1>
+    <p class="win-amt num" id="winAmt"></p>
+    <p class="win-lot" id="winLot"></p>
+    <p class="win-note">Hasil bidaan untuk dana pilihan raya PAS Kawasan Kota Bharu.</p>
+  </div>
+  <div class="win-pay" id="winPay" hidden></div>
+  <p class="win-paid" id="winPaid" hidden>Bayaran telah disahkan. Terima kasih.</p>
+</section>
+
+<p class="conn-x" id="conn" hidden>Sambungan terputus…</p>
+<button type="button" class="fs" id="fs">Skrin penuh</button>
+
+<script src="assets/lot.js"></script>
+<script src="assets/live.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const L = window.LOT || {};
+  const esc = Live.esc;
+  /* "RM30,000" -> small grey RM + large digits */
+  const big = n => '<span class="cur">RM</span>' + esc(Live.money(n).slice(2));
+
+  // Static lot text
+  const img = $('photo');
+  const firstImg = (L.images || [])[0];
+  if (firstImg) { img.src = firstImg.src; img.alt = firstImg.alt || ''; } else if (L.hero) img.src = L.hero;
+  $('org').textContent = L.org || '';
+  $('lotTitle').textContent = L.title || '';
+  $('event').textContent = L.event || '';
+  $('winEvent').textContent = L.event || '';
+  $('benef').textContent = L.beneficiary || '';
+  $('slogan').textContent = L.slogan || '';
+  $('winLot').textContent = L.shortTitle || L.title || '';
+
+  /* Shrink an element's font until it fits its box (width, and max-height for 2-line names). */
+  function fit(el, lines) {
+    el.style.fontSize = '';
+    if (el.hidden || !el.offsetParent) return;
+    let size = parseFloat(getComputedStyle(el).fontSize), min = size * .4, guard = 40;
+    const over = () => el.scrollWidth > el.clientWidth + 1 ||
+      (lines && el.scrollHeight > parseFloat(getComputedStyle(el).lineHeight) * (lines + .5));
+    while (guard-- && size > min && over()) {
+      size *= .94; el.style.fontSize = size + 'px';
+    }
+  }
+  function fitAll() {
+    ['price', 'draftPrice', 'winAmt'].forEach(id => fit($(id)));      // one line: width only
+    ['leader', 'winName'].forEach(id => fit($(id), 2));                  // up to two lines
+    // Never spill into the footer: drop the oldest rows of the recent list if space runs out.
+    const body = $('liveBody'), list = $('list');
+    [...list.children].forEach(li => { li.hidden = false; });
+    let rows = [...list.children];
+    while (!body.hidden && rows.length > 2 && body.scrollHeight > body.clientHeight + 1) rows.pop().hidden = true;
+  }
+
+  let prevTopId, seen = new Set();
+
+  function show(id) {
+    const s = $('split'), w = $('win');
+    if (id === 'win') { if (w.hidden) { w.hidden = false; s.hidden = true; } }
+    else if (s.hidden) { s.hidden = false; w.hidden = true; }
+  }
+
+  function render(s, changed) {
+    const bids = s.bids || [];
+    const top = bids.length ? bids[bids.length - 1] : null;
+    const winner = s.winner || (s.status === 'closed' ? top : null);
+
+    if (s.status === 'closed' && winner) {
+      show('win');
+      $('winName').textContent = winner.name;
+      $('winAmt').innerHTML = big(winner.amount);
+      const p = s.payment || {};
+      const pay = $('winPay');
+      if (s.paid) {
+        pay.hidden = true; $('winPaid').hidden = false;
+      } else {
+        $('winPaid').hidden = true;
+        if (String(p.accNo || '').trim()) {
+          const rows = [['Bank', p.bank], ['Nama akaun', p.accName], ['No. akaun', p.accNo]].filter(r => String(r[1] || '').trim());
+          pay.innerHTML = '<dl style="--cols:' + rows.length + '">' +
+            rows.map(r => '<div><dt>' + esc(r[0]) + '</dt><dd' + (r[0] === 'No. akaun' ? ' class="num"' : '') + '>' + esc(r[1]) + '</dd></div>').join('') + '</dl>' +
+            (String(p.note || '').trim() ? '<p class="note">' + esc(p.note) + '</p>' : '');
+          pay.hidden = false;
+        } else { pay.hidden = true; pay.innerHTML = ''; }
+      }
+      prevTopId = top ? top.id : null;
+      requestAnimationFrame(fitAll);
+      return;
+    }
+
+    show('split');
+    const st = $('status');
+    st.hidden = false;
+    st.className = 'st' + (s.status === 'open' ? ' open' : s.status === 'closed' ? ' closed' : '');
+    st.textContent = s.status === 'open' ? 'Bidaan langsung' : s.status === 'closed' ? 'Bidaan ditutup' : 'Belum dibuka';
+
+    $('draftBody').hidden = s.status !== 'draft';
+    $('liveBody').hidden = s.status !== 'open';
+    $('emptyBody').hidden = s.status !== 'closed';
+
+    if (s.status === 'draft') {
+      $('draftPrice').innerHTML = big(s.startPrice);
+      $('draftInc').textContent = Number(s.increment) > 0 ? 'Kenaikan bidaan minimum ' + Live.money(s.increment) : '';
+    }
+
+    if (s.status === 'open') {
+      if (top) {
+        $('priceLbl').textContent = 'Bidaan tertinggi';
+        $('price').innerHTML = big(top.amount);
+        $('leader').className = 'leader';
+        $('leader').innerHTML = '<span class="by">oleh </span>' + esc(top.name);
+        $('next').innerHTML = Number(s.increment) > 0 ? 'Bidaan seterusnya: <b>' + esc(Live.money(s.minNext)) + '</b>' : '';
+      } else {
+        $('priceLbl').textContent = 'Harga mula';
+        $('price').innerHTML = big(s.startPrice);
+        $('leader').className = 'leader none';
+        $('leader').textContent = 'Menunggu bidaan pertama';
+        $('next').innerHTML = Number(s.increment) > 0 ? 'Kenaikan bidaan minimum <b>' + esc(Live.money(s.increment)) + '</b>' : '';
+      }
+      const recent = bids.slice(-5).reverse();
+      $('recent').hidden = !recent.length;
+      $('list').innerHTML = recent.map(b =>
+        '<li data-id="' + esc(b.id) + '"><span class="who">' + esc(b.name) + '</span>' +
+        '<span class="t num">' + esc(Live.time(b.at)) + '</span>' +
+        '<span class="amt num">' + esc(Live.money(b.amount)) + '</span></li>').join('');
+
+      // A new highest bid: make it obvious from the back of the hall.
+      // (After an undo the new top is a bid we have already seen, so no flash.)
+      if (changed && top && prevTopId !== undefined && top.id !== prevTopId && !seen.has(top.id)) {
+        const box = $('priceBox');
+        box.classList.remove('hit'); void box.offsetWidth; box.classList.add('hit');
+        const li = $('list').firstElementChild; if (li) li.classList.add('new');
+      }
+    }
+    prevTopId = top ? top.id : null;
+    requestAnimationFrame(fitAll);
+  }
+
+  function remember(s) { seen = new Set((s.bids || []).map(b => b.id)); }
+
+  Live.watch(
+    (s, changed) => { render(s, changed); remember(s); },
+    (ok, fails) => { $('conn').hidden = ok || (fails || 0) < 2; },
+    1500
+  );
+
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(fitAll, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+
+  // Full screen button + idle cursor
+  const fs = $('fs');
+  const toggleFs = () => {
+    if (document.fullscreenElement) document.exitFullscreen && document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  };
+  fs.addEventListener('click', toggleFs);
+  document.addEventListener('keydown', e => { if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && !e.altKey) toggleFs(); });
+  document.addEventListener('fullscreenchange', () => { fs.textContent = document.fullscreenElement ? 'Keluar skrin penuh' : 'Skrin penuh'; });
+
+  let idleT;
+  function wake() {
+    document.body.classList.remove('idle');
+    clearTimeout(idleT);
+    idleT = setTimeout(() => document.body.classList.add('idle'), 3000);
+  }
+  ['mousemove', 'mousedown', 'touchstart'].forEach(ev => document.addEventListener(ev, wake, { passive: true }));
+  wake();
+
+  // Keep the projector from sleeping (where supported).
+  let lock = null;
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator && !document.hidden) lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+  keepAwake();
+})();
+</script>
+</body>
+</html>

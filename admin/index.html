@@ -1,647 +1,867 @@
 <!doctype html>
 <html lang="ms">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Papan pemuka</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="../assets/tw-config.js?v=20261112d"></script>
-  <link rel="stylesheet" href="../assets/app.css?v=20261112d">
-  <script src="../assets/data.js?v=20261112d"></script>
-  <script src="../assets/store.js?v=20261112d"></script>
-  <script src="../assets/auction.js?v=20261112d"></script>
-  <script src="../assets/ui.js?v=20261112d"></script>
-  <style>
-    /* open tables: first/last cells align with the page edge */
-    .t-open th:first-child, .t-open td:first-child { padding-left: 0; }
-    .t-open th:last-child, .t-open td:last-child { padding-right: 0; }
-    .kpi-v { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 400; letter-spacing: -.02em; line-height: 1; white-space: nowrap;
-      font-size: clamp(24px, 6.4vw, 34px); color: var(--ink); }
-    .ch-grid { stroke: var(--line); stroke-width: 1; stroke-opacity: .7; }
-    .ch-base { stroke: var(--ink); stroke-width: 1; }
-    .ch-ax { fill: var(--muted); font: 400 12px var(--font); font-variant-numeric: tabular-nums; }
-    .ch-ax.is-today { fill: var(--ink); font-weight: 500; }
-    .ch-bar { fill: #b9babe; }
-    .ch-bar.is-today { fill: var(--ink); }
-    .ch-bar.is-hover { fill: var(--ink-2); }
-    .ch-bar.is-today.is-hover { fill: var(--ink); }
-    .ch-hit { fill: transparent; }
-    /* ---------- Mod skrin besar (projector view for the dinner) ----------
-     * Dark, calm, readable from the back of the hall. Barlow only; numbers tabular.
-     * The shop's accent colour is used for the price and nothing else; brand colour only on the logo mark. */
-    .stage { position: fixed; inset: 0; z-index: 95; display: flex; flex-direction: column; overflow: auto;
-      background: #0b0c0e; color: #f4f4f5; font-family: var(--font); font-variant-numeric: tabular-nums; }
-    .stage[hidden] { display: none; }
-    .stage :focus-visible { outline: 2px solid #f4f4f5; outline-offset: 3px; }
-    .stage-top { display: flex; align-items: center; gap: 14px; padding: 14px clamp(16px, 3vw, 48px); border-bottom: 1px solid rgba(244,244,245,.12); }
-    .stage-mark { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 8px; background: var(--brand); color: #fff;
-      font: 500 13px/1 var(--font); letter-spacing: .04em; }
-    .stage-btn { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: 0 1rem; border: 1px solid rgba(244,244,245,.4); border-radius: 8px;
-      color: #f4f4f5; font-size: 15px; font-weight: 400; background: transparent; cursor: pointer; white-space: nowrap; }
-    .stage-btn:hover { background: rgba(244,244,245,.08); border-color: rgba(244,244,245,.7); }
-    .stage-sel { min-height: 44px; max-width: 34vw; border: 1px solid rgba(244,244,245,.4); border-radius: 8px; background: #0b0c0e; color: #f4f4f5; padding: 0 .7rem; font: 400 15px var(--font); }
-    .stage-body { flex: 1; display: grid; grid-template-columns: minmax(0, 34fr) minmax(0, 66fr); gap: clamp(20px, 4vw, 80px);
-      align-items: center; padding: clamp(16px, 3vh, 40px) clamp(16px, 4vw, 72px); }
-    .stage-photo { width: 100%; max-height: calc(100vh - 220px); aspect-ratio: 4 / 5; object-fit: cover; border-radius: 8px; background: #1a1b1e; justify-self: center; }
-    .stage-info { min-width: 0; container-type: inline-size; }
-    .stage-k { font-size: clamp(14px, 1.25vw, 22px); font-weight: 400; color: rgba(244,244,245,.6); }
-    .stage-lot { font-size: clamp(14px, 1.25vw, 22px); color: rgba(244,244,245,.6); letter-spacing: .02em; }
-    .stage-title { font-family: var(--font-display); font-weight: 400; line-height: 1.12; letter-spacing: -.01em; color: #fff;
-      font-size: clamp(26px, min(3.6vw, 5vh), 68px); text-wrap: balance;
-      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .stage-price { font-family: var(--font); font-variant-numeric: tabular-nums; font-weight: 300; letter-spacing: -.035em; line-height: .95;
-      color: var(--accent); font-size: clamp(44px, 9vw, 180px); font-size: clamp(44px, min(14cqi, 14vh), 200px); white-space: nowrap; }
-    .stage-lead { font-size: clamp(18px, min(2vw, 2.9vh), 36px); font-weight: 300; color: rgba(244,244,245,.82); }
-    .stage-lead b { font-weight: 500; color: #fff; }
-    .stage-stats { display: grid; grid-template-columns: repeat(3, max-content); justify-content: start; column-gap: clamp(24px, 5cqi, 80px); row-gap: 12px;
-      border-top: 1px solid rgba(244,244,245,.14); padding-top: clamp(10px, 1.6vh, 24px); }
-    .stage-v { font-weight: 300; line-height: 1.1; white-space: nowrap; letter-spacing: -.01em;
-      font-size: clamp(22px, min(5.4cqi, 5.4vh), 72px); color: #fff; }
-    .stage-v.is-soon { color: #ff8a7a; }
-    .stage-bids { border-top: 1px solid rgba(244,244,245,.14); }
-    .stage-bids li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: clamp(12px, 2cqi, 32px); align-items: baseline;
-      padding: clamp(4px, .7vh, 10px) 0; border-bottom: 1px solid rgba(244,244,245,.08);
-      font-size: clamp(15px, min(1.5vw, 2.2vh), 26px); font-weight: 300; color: rgba(244,244,245,.62); }
-    .stage-bids li:first-child { color: #fff; font-weight: 400; }
-    .stage-bids .amt { text-align: right; }
-    .stage-foot { display: flex; flex-wrap: wrap; gap: 6px 24px; padding: 14px clamp(16px, 3vw, 48px); border-top: 1px solid rgba(244,244,245,.12);
-      font-size: clamp(13px, 1.1vw, 19px); color: rgba(244,244,245,.6); }
-    .stage-foot b { color: #fff; font-weight: 500; }
-    .stage-dot { display: inline-block; width: .55em; height: .55em; border-radius: 50%; background: #e5483a; margin-right: .45em; vertical-align: .08em; animation: pulse 1.6s ease-in-out infinite; }
-    .stage-dot.off { background: rgba(244,244,245,.4); animation: none; }
-    .stage-new { animation: stageNew 1.6s ease-out; }
-    @keyframes stageNew { 0% { background: rgba(244,244,245,.12); } 100% { background: transparent; } }
-    @media (max-width: 767px) {
-      .stage-body { grid-template-columns: minmax(0, 1fr); align-items: start; }
-      .stage-photo { max-height: 38vh; width: auto; }
-      .stage-price { font-size: clamp(44px, 17cqi, 84px); }
-      .stage-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .stage-sel { max-width: 40vw; }
-    }
-    @media (prefers-reduced-motion: reduce) { .stage-new, .stage-dot { animation: none !important; } }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#010205">
+<meta name="api" content="../api.php">
+<title>Admin bidaan · PAS Kawasan Kota Bharu</title>
+<link rel="stylesheet" href="../assets/live.css">
+<style>
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  .top { background: var(--ink); color: #fff; }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; }
+  .top .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .top .brand b { font-weight: 500; white-space: nowrap; }
+  .top .brand span { color: #a9abaf; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .btn-top { min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #55575c; background: transparent; color: #fff; font: 500 15px/1 var(--font); cursor: pointer; }
+  .btn-top:hover { background: #1c1d21; }
+
+  main.wrap { padding-top: 20px; padding-bottom: 72px; }
+  h2 { font-size: 24px; margin-bottom: 14px; }
+  .blk { padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .note { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .err { color: var(--live); font-size: 15px; margin-top: 10px; }
+  .err:empty { display: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .field { margin-bottom: 16px; }
+
+  /* PIN gate */
+  .gate { max-width: 380px; margin: 48px auto 0; }
+  .gate h1 { font-size: 36px; margin-bottom: 8px; }
+  .gate > p { color: var(--muted); margin-bottom: 24px; }
+  .gate .in { font-size: 22px; letter-spacing: .2em; text-align: center; }
+  .gate .btn { width: 100%; margin-top: 12px; }
+
+  /* layout */
+  .console { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "sum" "main" "list" "tools"; column-gap: 48px; }
+  .a-sum { grid-area: sum; } .a-main { grid-area: main; } .a-list { grid-area: list; } .a-tools { grid-area: tools; }
+  @media (min-width: 900px) {
+    .console { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
+      grid-template-areas: "sum sum" "main list" "tools list" ". list"; }
+    .a-list { border-left: 1px solid var(--line); padding-left: 32px; margin-top: 0; }
+  }
+
+  /* summary */
+  .sum { padding: 18px 16px; margin-bottom: 4px; }
+  .sum-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .sum-lot { font-size: 14px; color: var(--muted); }
+  @media (max-width: 519px) { .sum-lot { display: none; } }
+  .sum-body { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 32px; margin-top: 14px; }
+  .sum-label { font-size: 14px; color: var(--ink-2); }
+  .sum-amt { font-family: var(--display); font-size: clamp(40px, 11vw, 64px); line-height: 1; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .sum-who { font-size: 17px; margin-top: 6px; overflow-wrap: anywhere; }
+  .sum-who .ph { color: var(--muted); }
+  .sum-meta { display: flex; flex-direction: column; gap: 2px; font-size: 15px; color: var(--ink-2); }
+  .sum-meta b { font-weight: 500; color: var(--ink); }
+  .sum-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .sum-links { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 15px; }
+  .sum-links a { text-underline-offset: 3px; min-height: 32px; display: inline-flex; align-items: center; }
+
+  /* record form */
+  .in-big { font-size: 20px !important; min-height: 56px !important; }
+  .amt-wrap { display: flex; align-items: stretch; border: 1px solid var(--line-strong); border-radius: 8px; background: #fff; }
+  .amt-wrap:focus-within { outline: 2px solid var(--ink); outline-offset: -1px; border-color: var(--ink); }
+  .amt-wrap span { display: flex; align-items: center; padding: 0 4px 0 14px; font-size: 22px; color: var(--muted); }
+  .amt-wrap input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 8px 14px 8px 4px; min-height: 60px;
+    font: 400 30px var(--display); font-variant-numeric: tabular-nums; color: var(--ink); }
+  .hint { min-height: 24px; margin-top: 6px; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .hint.bad { color: var(--live); }
+  .hint b { font-weight: 600; }
+  .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .quick .btn { padding: 0 8px; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .quick .q-start { grid-column: 1 / -1; }
+  @media (min-width: 520px) { .quick { grid-template-columns: repeat(4, 1fr); } }
+  .rec-submit { width: 100%; min-height: 56px; font-size: 18px; margin-top: 8px; }
+  .notice { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 14px; font-size: 15px; margin-bottom: 14px; }
+
+  /* inline confirms */
+  .ask { background: var(--tile); border-radius: 8px; padding: 16px; margin-top: 12px; }
+  .ask p { margin-bottom: 12px; overflow-wrap: anywhere; }
+  .ask .row .btn { flex: 1 1 140px; }
+  .ask-big { padding: 20px 16px; margin-top: 0; }
+  .ask-big .q { font-size: 18px; }
+  .ask-big .q-amt { display: block; font-family: var(--display); font-size: clamp(44px, 13vw, 72px); line-height: 1.05; font-variant-numeric: tabular-nums; margin: 6px 0; }
+  .ask-big .q-who { display: block; font-size: 22px; overflow-wrap: anywhere; }
+  .ask-big .q-ph { display: block; font-size: 15px; color: var(--muted); margin-top: 4px; }
+  .ask-big .warn { color: var(--warn); font-size: 15px; margin-top: 10px; }
+  .ask-big .btn { min-height: 56px; font-size: 18px; }
+
+  /* bid list */
+  .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .bids li { display: block; padding: 12px 0; }
+  .bid-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .bid-row .who b { font-weight: 500; font-size: 17px; display: block; }
+  .bid-row .amt { font-size: 18px; text-align: right; }
+  .bid-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .btn-sm { min-height: 48px; }
+  .bids li .ask { margin-top: 10px; }
+  .empty { color: var(--muted); padding: 12px 0; }
+
+  /* winner */
+  .win-amt { font-family: var(--display); font-size: 44px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .win-who { font-size: 20px; margin-top: 4px; overflow-wrap: anywhere; }
+  .paid-line { margin-top: 16px; padding: 12px 14px; border-radius: 8px; background: var(--ok-soft); color: var(--ok); overflow-wrap: anywhere; }
+
+  /* details */
+  details { border-bottom: 1px solid var(--line); }
+  summary { list-style: none; cursor: pointer; min-height: 56px; display: flex; align-items: center; justify-content: space-between; font-size: 18px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '+'; font-size: 22px; color: var(--muted); }
+  details[open] summary::after { content: '−'; }
+  .det-body { padding: 4px 0 24px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  input.in:disabled { background: var(--tile); color: var(--muted); }
+  textarea.in { min-height: 88px; resize: vertical; }
+  .danger summary { color: var(--live); }
+
+  .toast { position: fixed; left: 50%; top: calc(8px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ink); color: #fff;
+    padding: 12px 20px; border-radius: 8px; font-size: 16px; max-width: calc(100% - 32px); z-index: 10; }
+  .edit-start { min-height: 44px; padding: 0; border: 0; background: none; font: 500 15px var(--font); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+</style>
 </head>
-<body class="min-h-screen">
-  <div id="eb-header"></div>
-  <main class="max-w-6xl mx-auto px-4 md:px-6 pt-10 pb-8 sm:pt-14" id="app">
-    <!-- page head -->
-    <div class="flex flex-col gap-5 sm:flex-row sm:items-end mb-8 sm:mb-10">
-      <div class="min-w-0">
-        <h1 class="font-serif text-[36px] sm:text-[40px] font-normal leading-[1.1] tracking-[-0.01em] text-ink">Papan pemuka</h1>
-        <p class="mt-2 text-[16px] text-muted" id="sub"></p>
-      </div>
-      <div class="sm:ml-auto grid grid-cols-[minmax(0,1fr)_auto] sm:flex gap-2">
-        <button type="button" id="btn-stage" class="btn btn-outline" aria-haspopup="dialog" title="Paparan untuk projektor di majlis: gambar, bidaan tertinggi dan masa, dikemas kini secara langsung">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="8.5" rx="1"/><path d="M5.5 14h5M8 11.25V14"/></svg>Mod skrin besar</button>
-        <a id="btn-add" class="btn btn-brand" href="#">Tambah item</a>
-      </div>
-    </div>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><b>Admin bidaan</b><span id="org">PAS Kawasan Kota Bharu</span></div>
+    <button class="btn-top" id="logout" type="button" hidden>Keluar</button>
+  </div>
+</header>
 
-    <!-- KPI strip: one grey tile -->
-    <section id="kpis" aria-label="Ringkasan" class="tile grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-7 sm:gap-x-10 sm:gap-y-9 px-5 py-6 sm:px-8 sm:py-8 mb-14 sm:mb-20"></section>
+<main class="wrap">
+  <!-- PIN gate -->
+  <section class="gate" id="gate" hidden>
+    <h1>Admin bidaan</h1>
+    <p>Masukkan PIN untuk merekod bidaan.</p>
+    <form id="gate-form" novalidate>
+      <label class="f" for="pin">PIN</label>
+      <input class="in" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="12" required>
+      <button class="btn" id="gate-btn" type="submit">Masuk</button>
+      <p class="err" id="gate-err" role="alert"></p>
+    </form>
+  </section>
+  <p class="muted" id="boot" style="margin-top:32px">Menyemak…</p>
 
-    <!-- live + feed -->
-    <section class="grid lg:grid-cols-3 gap-x-10 gap-y-14 mb-14 sm:mb-20">
-      <div class="lg:col-span-2 min-w-0">
-        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
-          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Sedang dilelong</h2>
-          <span id="live-count" class="tabular-nums text-[14px] text-muted"></span>
-          <a id="lnk-items" class="link-arrow ml-auto text-[15px]" href="#">Urus item</a>
-        </div>
-        <div id="live-table" class="border-t border-ink"></div>
+  <!-- console -->
+  <div class="console" id="console" hidden>
+    <section class="a-sum tile sum" aria-label="Ringkasan">
+      <div class="sum-head">
+        <span class="status" id="s-status">Belum dibuka</span>
+        <span class="sum-lot" id="s-lot"></span>
       </div>
-      <div class="min-w-0">
-        <div class="flex items-baseline gap-3 mb-4">
-          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Bidaan terkini</h2>
-          <span class="text-[14px] text-muted">15 terakhir</span>
+      <div class="sum-body">
+        <div>
+          <div class="sum-label" id="s-label">Bidaan tertinggi</div>
+          <div class="sum-amt" id="s-amt">RM0</div>
+          <button type="button" class="edit-start" id="s-edit" hidden>Ubah harga mula</button>
+          <div class="sum-who" id="s-who"></div>
         </div>
-        <ul id="feed" class="divide-line border-t border-ink max-h-[480px] overflow-y-auto"></ul>
+        <div class="sum-meta num">
+          <span id="s-count">0 bidaan</span>
+          <span id="s-next"></span>
+          <span id="s-inc"></span>
+        </div>
+      </div>
+      <div class="sum-foot">
+        <div class="sum-links">
+          <a href="../skrin.html" target="_blank" rel="noopener">Buka skrin projektor</a>
+          <a href="../" target="_blank" rel="noopener">Lihat paparan tetamu</a>
+        </div>
+        <span class="conn" id="conn">Menyambung…</span>
       </div>
     </section>
 
-    <!-- chart + rules -->
-    <section class="grid lg:grid-cols-3 gap-x-10 gap-y-14">
-      <div class="lg:col-span-2 min-w-0">
-        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
-          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Yuran penyertaan</h2>
-          <span class="text-[14px] text-muted">14 hari lepas dan hari ini</span>
-          <span id="chart-total" class="ml-auto tabular-nums text-[18px] text-ink"></span>
-        </div>
-        <div class="border-t border-ink pt-3">
-          <p id="chart-read" class="text-[14px] text-muted min-h-[22px]" aria-live="polite"></p>
-          <div id="chart" class="mt-3"></div>
-        </div>
-      </div>
-      <div class="min-w-0" id="rules"></div>
-    </section>
-  </main>
-  <div id="eb-footer"></div>
-
-  <script>
-    EB.init({ area: 'admin', active: 'index', title: 'Papan pemuka' });
-    const { esc, money, link, timeAgo, fmtDate, itemImage, lotNo, toast } = EB.ui;
-    const A = EB.auction;
-    const slug = EB.tenant.slug();
-
-    /* ---------- Tutup bidaan sekarang (local helper; the same code lives in admin/index.html and admin/items.html) ----------
-     * The engine (EB.auction closeDue, every 1s in the leader tab) does the real closing: winner, invoice, inbox.
-     * We only move endAt into the past and wait for item.result to appear. */
-    function toastLink(msg, href, label, type) {
-      let box = document.getElementById('eb-toasts');
-      if (!box) {
-        box = document.createElement('div');
-        box.id = 'eb-toasts';
-        box.className = 'fixed z-[100] bottom-4 right-4 left-4 sm:left-auto flex flex-col gap-2 items-stretch sm:items-end pointer-events-none';
-        document.body.appendChild(box);
-      }
-      const bar = { success: 'border-l-4 border-l-[var(--ok)]', warn: 'border-l-4 border-l-[var(--warn)]', error: 'border-l-4 border-l-[var(--live)]' }[type] || '';
-      const el = document.createElement('div');
-      el.className = `eb-toast pointer-events-auto ${bar} bg-[var(--ink)] text-white text-[15px] rounded-lg shadow-lg px-4 py-3 sm:max-w-sm`;
-      el.setAttribute('role', 'status');
-      el.textContent = msg + ' ';
-      if (href) {
-        const a = document.createElement('a');
-        a.href = href; a.textContent = label || 'Lihat';
-        a.className = 'font-medium text-white underline underline-offset-2 whitespace-nowrap';
-        el.appendChild(a);
-      }
-      box.appendChild(el);
-      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 8600);
-      setTimeout(() => el.remove(), 9000);
-    }
-
-    function closeHead(item) {
-      return `<div class="flex gap-3 items-start pb-3 mb-4 border-b border-line"><img src="${esc(EB.ui.itemImage(item))}" class="h-16 w-[52px] rounded object-cover shrink-0 bg-paper" alt="">
-        <div class="min-w-0"><div class="lot">${esc(EB.ui.lotNo(item))}</div><div class="font-serif text-[18px] font-normal text-ink leading-snug">${esc(item.title)}</div></div></div>`;
-    }
-
-    /** Opens the confirm modal. With no bids it explains why and offers "Tamatkan tanpa pemenang". */
-    function askCloseNow(itemId) {
-      const s = EB.store.get();
-      const item = s.items.find(i => i.id === itemId);
-      if (!item || A.status(item) !== 'live') { EB.ui.toast('Lelongan ini tidak lagi berlangsung.', 'warn'); return; }
-      const lot = EB.ui.lotNo(item);
-      const h = A.highest(itemId, s);
-      if (!h) {
-        EB.ui.modal({
-          title: 'Belum ada bidaan',
-          body: closeHead(item) + `<p class="text-[14px]">"Tutup bidaan sekarang" tidak tersedia kerana belum ada sesiapa membida item ini, jadi tiada pemenang untuk dipilih.</p>
-            <p class="mt-3 text-[14px] text-muted">Anda boleh tamatkan lelongan tanpa pemenang. Item akan disenaraikan sebagai "Tiada bidaan" di Pemenang & bayaran dan boleh dilelong semula. Tindakan ini tidak boleh dibatalkan.</p>`,
-          actions: [{ label: 'Batal' }, { label: 'Tamatkan tanpa pemenang', danger: true, onClick: () => endNow(itemId) }],
-        });
-        return;
-      }
-      let wrap = null, done = false;
-      EB.ui.modal({
-        title: 'Tutup bidaan sekarang?',
-        body: closeHead(item) + `<p class="text-[14px] leading-relaxed">Bidaan tertinggi semasa
-            <b data-cn-amt class="tabular-nums font-medium text-ink whitespace-nowrap">${money(h.amount)}</b> oleh <b data-cn-name class="font-medium text-ink">${esc(EB.users.byId(h.userId).name)}</b> akan menjadi pemenang.
-            Tindakan ini tidak boleh dibatalkan.</p>
-          <p class="mt-3 text-[13px] text-muted">Invois dihantar kepada pemenang serta-merta dengan tempoh bayaran ${A.tenantOf(item).settings.payDeadlineHours} jam. Pembida lain dimaklumkan melalui peti masuk.</p>
-          <p data-cn-note class="hidden mt-3 text-[13px] text-ink-2 border-l-2 border-[var(--warn)] bg-[var(--warn-soft)] px-3 py-2 rounded-r">Bidaan baharu masuk semasa tetingkap ini dibuka. Pemenang dan amaun di atas telah dikemas kini.</p>`,
-        actions: [{ label: 'Batal' }, { label: 'Tutup bidaan', danger: true, onClick: () => { done = true; endNow(itemId); } }],
-        onOpen: el => { wrap = el; },
-      });
-      // keep the named winner honest while the modal is open (bots may still bid)
-      let lastId = h.id;
-      const unsub = EB.store.subscribe(() => {
-        if (done || !wrap || !document.body.contains(wrap)) { setTimeout(unsub, 0); return; }
-        const s2 = EB.store.get();
-        const it2 = s2.items.find(i => i.id === itemId);
-        if (!it2 || A.status(it2) !== 'live') { wrap.remove(); setTimeout(unsub, 0); EB.ui.toast('Lelongan ini sudah tamat.', 'warn'); return; }
-        const h2 = A.highest(itemId, s2);
-        if (!h2 || h2.id === lastId) return;
-        lastId = h2.id;
-        wrap.querySelector('[data-cn-amt]').textContent = money(h2.amount);
-        wrap.querySelector('[data-cn-name]').textContent = EB.users.byId(h2.userId).name;
-        wrap.querySelector('[data-cn-note]').classList.remove('hidden');
-      });
-    }
-
-    /** Move endAt into the past; the engine closes the item within ~1s. Then report the winner. */
-    function endNow(itemId) {
-      const it = EB.store.get().items.find(i => i.id === itemId);
-      if (!it || A.status(it) !== 'live') { EB.ui.toast('Lelongan ini tidak lagi berlangsung.', 'warn'); return; }
-      const now = Date.now();
-      A.updateItem(itemId, { endAt: now - 1, closedEarlyBy: 'admin', closedEarlyAt: now });
-      const winners = EB.ui.link('admin/winners.html');
-      const t0 = Date.now();
-      const poll = setInterval(() => {
-        const x = EB.store.get().items.find(i => i.id === itemId);
-        if (x && x.result) {
-          clearInterval(poll);
-          if (x.result.winnerId) toastLink('Bidaan ditutup. Pemenang: ' + EB.users.byId(x.result.winnerId).name + ' (' + money(x.result.amount) + ').', winners, 'Lihat pemenang & bayaran', 'success');
-          else toastLink('Lelongan ditamatkan tanpa pemenang.', winners, 'Lihat pemenang & bayaran', 'success');
-        } else if (Date.now() - t0 > 8000) {
-          clearInterval(poll);
-          toastLink('Bidaan ditutup, tetapi pemenang belum diproses. Muat semula halaman ini.', winners, 'Pemenang & bayaran', 'warn');
-        }
-      }, 250);
-    }
-
-    document.getElementById('btn-add').href = link('admin/items.html', { new: 1 });
-    const btnShop = document.getElementById('btn-shop');   // header already links to the shop
-    if (btnShop) btnShop.href = link('shop.html');
-    document.getElementById('lnk-items').href = link('admin/items.html');
-
-    function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
-    const clock = ts => new Date(ts).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-    function kpi(label, value, sub) {
-      return `<div class="min-w-0">
-        <div class="eyebrow">${label}</div>
-        <div class="kpi-v mt-2">${value}</div>
-        <div class="mt-2 text-[13px] leading-snug text-muted">${sub}</div></div>`;
-    }
-
-    const prevTop = {};      // itemId -> last highest amount (for flash)
-    let lastFeedId = null;
-
-    function render() {
-      const s = EB.store.get();
-      const t = s.tenants.find(x => x.slug === slug);
-      const now = Date.now();
-      const today = startOfToday();
-      const items = s.items.filter(i => i.tenant === slug);
-      const bids = s.bids.filter(b => b.tenant === slug);
-      const fees = s.fees.filter(f => f.tenant === slug);
-      const orders = s.orders.filter(o => o.tenant === slug);
-      const live = items.filter(i => A.status(i, now) === 'live').sort((a, b) => a.endAt - b.endAt);
-      const upcoming = items.filter(i => A.status(i, now) === 'upcoming');
-      const bidsToday = bids.filter(b => b.at >= today);
-      const bidders = new Set(bids.map(b => b.userId));
-      const biddersToday = new Set(bidsToday.map(b => b.userId));
-      // include the older fee history so this matches the chart total + super admin
-      const hist = s.feeHistory.filter(h => h.tenant === slug);
-      const feeSum = fees.reduce((a, f) => a + f.amount, 0) + hist.reduce((a, h) => a + h.amount, 0);
-      const feeCount = fees.length + hist.reduce((a, h) => a + h.count, 0);
-      const feeToday = fees.filter(f => f.at >= today);
-      const topSum = live.reduce((a, i) => { const h = A.highest(i.id, s); return a + (h ? h.amount : 0); }, 0);
-      const paid = orders.filter(o => o.status === 'paid');
-      const unpaid = orders.filter(o => o.status === 'unpaid');
-      const paidSum = paid.reduce((a, o) => a + o.amount, 0);
-
-      document.getElementById('sub').textContent = t.name + ' · ' + new Date().toLocaleDateString('ms-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' · dikemas kini setiap bidaan';
-
-      document.getElementById('kpis').innerHTML = [
-        kpi('Sedang dilelong', live.length, `${upcoming.length} akan datang · ${items.length} item`),
-        kpi('Bidaan hari ini', bidsToday.length.toLocaleString('en-MY'), `${bids.length.toLocaleString('en-MY')} sejak mula`),
-        kpi('Pembida unik', bidders.size, `${biddersToday.size} aktif hari ini`),
-        kpi('Hasil yuran', money(feeSum), `${feeCount.toLocaleString('en-MY')} bayaran · ${feeToday.length} hari ini`),
-        kpi('Nilai bidaan semasa', money(topSum), `Tertinggi bagi ${live.length} item aktif`),
-        kpi('Jualan dibayar', money(paidSum), `${paid.length} dibayar · ${unpaid.length} belum bayar`),
-      ].join('');
-
-      renderLive(s, t, live, now);
-      renderFeed(s, bids);
-      renderChart(s, t, fees, today);
-      renderRules(t);
-    }
-
-    function renderLive(s, t, live, now) {
-      document.getElementById('live-count').textContent = live.length + ' item';
-      const box = document.getElementById('live-table');
-      if (!live.length) {
-        box.innerHTML = `<div class="py-12"><p class="text-[16px] text-ink-2">Tiada lelongan sedang berlangsung.</p>
-          <a class="link-arrow mt-3 text-[15px]" href="${link('admin/items.html', { new: 1 })}">Tambah item</a></div>`;
-        return;
-      }
-      // compute once per item (flash/bump state), then draw a table (tablet/desktop) and a stacked list (phones)
-      const rows = live.map(i => {
-        const all = A.bidsFor(i.id, s);
-        const h = all[0];
-        const changed = prevTop[i.id] !== undefined && h && prevTop[i.id] !== h.amount;
-        prevTop[i.id] = h ? h.amount : 0;
-        return { i, all, h, tier: EB.tenant.tier(t, i.tier), last: A.isLastWindow(i, s, now), changed };
-      });
-      const lastTag = r => r.last ? `<span class="status status-live mt-1">${t.settings.lastWindowMin} min akhir · ×${t.settings.lastWindowMultiplier}</span>` : '';
-      const who = r => r.h ? esc(EB.users.byId(r.h.userId).name) + ' · ' + r.all.length + ' bidaan' : 'Mula ' + money(r.i.startPrice);
-      const amt = r => r.h ? money(r.h.amount) : '<span class="text-[14px] text-muted">Tiada bidaan</span>';
-      const closeBtn = (r, cls) => r.h
-        ? `<button type="button" class="btn btn-outline ${cls}" data-close="${esc(r.i.id)}" title="Tamatkan lelongan sekarang; pembida tertinggi menjadi pemenang">Tutup bidaan</button>`
-        : `<button type="button" class="btn btn-outline ${cls} opacity-50" data-close="${esc(r.i.id)}" aria-disabled="true" title="Tidak tersedia: belum ada bidaan. Klik untuk tamatkan tanpa pemenang.">Tutup bidaan</button>`;
-      box.innerHTML = `<table class="table t-open hidden sm:table">
-        <thead><tr><th>Item</th>
-          <th class="num">Tertinggi</th><th class="num">Baki masa</th><th class="num"><span class="sr-only">Tindakan</span></th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="${r.changed ? 'flash' : ''}">
-            <td><a href="${link('item.html', { id: r.i.id })}" target="_blank" rel="noopener" class="flex items-center gap-4 min-w-0 group">
-              <img src="${esc(itemImage(r.i))}" class="h-14 w-11 rounded object-cover shrink-0 bg-tile" alt="">
-              <span class="min-w-0"><span class="lot block">${esc(lotNo(r.i))}</span>
-              <span class="block font-serif text-[17px] leading-snug text-ink truncate max-w-[240px] group-hover:underline underline-offset-4 decoration-1">${esc(r.i.title)}</span>
-              <span class="block text-[13px] text-muted">Tier ${esc(r.tier.name)}</span>${lastTag(r)}</span></a></td>
-            <td class="num"><div class="tabular-nums text-[18px] text-ink whitespace-nowrap ${r.changed ? 'bump inline-block' : ''}">${amt(r)}</div>
-              <div class="text-[13px] text-muted whitespace-nowrap">${who(r)}</div></td>
-            <td class="num whitespace-nowrap"><span class="tabular-nums ${r.last ? 'text-[var(--live)]' : 'text-ink'}" data-countdown-end="${r.i.endAt}">${EB.ui.countdown(r.i.endAt - now)}</span></td>
-            <td class="text-right whitespace-nowrap">${closeBtn(r, 'btn-sm')}</td>
-          </tr>`).join('')}</tbody></table>
-        <ul class="sm:hidden divide-line">${rows.map(r => `<li class="py-5 ${r.changed ? 'flash' : ''}">
-            <a href="${link('item.html', { id: r.i.id })}" target="_blank" rel="noopener" class="flex gap-4 min-w-0">
-              <img src="${esc(itemImage(r.i))}" class="h-[88px] w-[70px] rounded object-cover shrink-0 bg-tile" alt="">
-              <span class="min-w-0 flex-1"><span class="lot block">${esc(lotNo(r.i))}</span>
-                <span class="block font-serif text-[18px] leading-snug text-ink line-clamp-2">${esc(r.i.title)}</span>${lastTag(r)}</span></a>
-            <dl class="mt-4 grid grid-cols-2 gap-3">
-              <div><dt class="text-[13px] text-muted">Tertinggi</dt><dd class="tabular-nums text-[22px] leading-tight text-ink whitespace-nowrap ${r.changed ? 'bump' : ''}">${amt(r)}</dd>
-                <dd class="text-[13px] text-muted truncate">${who(r)}</dd></div>
-              <div><dt class="text-[13px] text-muted">Baki masa</dt><dd class="tabular-nums text-[22px] leading-tight ${r.last ? 'text-[var(--live)]' : 'text-ink'}" data-countdown-end="${r.i.endAt}">${EB.ui.countdown(r.i.endAt - now)}</dd></div>
-            </dl>
-            <div class="mt-4">${closeBtn(r, 'w-full')}</div></li>`).join('')}</ul>`;
-    }
-
-    document.getElementById('live-table').addEventListener('click', e => {
-      const b = e.target.closest('[data-close]');
-      if (b) askCloseNow(b.dataset.close);
-    });
-
-    function renderFeed(s, bids) {
-      const list = bids.slice().sort((a, b) => b.at - a.at).slice(0, 15);
-      const box = document.getElementById('feed');
-      if (!list.length) { box.innerHTML = '<li class="py-10 text-[15px] text-ink-2">Belum ada bidaan. Bidaan baharu akan muncul di sini serta-merta.</li>'; return; }
-      const newestPrev = lastFeedId;
-      lastFeedId = list[0].id;
-      let fresh = newestPrev !== null;
-      box.innerHTML = list.map(b => {
-        const u = EB.users.byId(b.userId);
-        const it = s.items.find(i => i.id === b.itemId) || { title: '(item dipadam)' };
-        const isNew = fresh && b.id !== newestPrev;
-        if (b.id === newestPrev) fresh = false;
-        return `<li class="flex items-start gap-3 py-3 ${isNew ? 'flash' : ''}">
-          <span class="tabular-nums text-[13px] text-muted pt-0.5 w-11 shrink-0" title="${esc(timeAgo(b.at))}">${clock(b.at)}</span>
-          <div class="min-w-0 flex-1"><div class="text-[15px] text-ink truncate">${esc(u.name)}</div>
-          <div class="text-[13px] text-muted truncate">${esc(it.title)}</div></div>
-          <div class="tabular-nums text-[15px] text-ink whitespace-nowrap">${money(b.amount)}</div></li>`;
-      }).join('');
-    }
-
-    /* ---------- fee chart: one series, inline SVG, brand only for today ---------- */
-    let chartKey = '';
-    let chartDays = [];
-    const fmtAx = v => v >= 1000 ? (v / 1000) + 'k' : String(v);
-
-    function readout(i) {
-      const d = chartDays[i];
-      if (!d) return;
-      document.getElementById('chart-read').innerHTML = `<span class="text-ink-2">${esc(d.label)}</span> · <span class="tabular-nums text-ink">${money(d.amount)}</span> · <span class="tabular-nums">${d.count}</span> bayaran`;
-      document.querySelectorAll('#chart .ch-bar').forEach(b => b.classList.toggle('is-hover', +b.dataset.b === i && i !== chartDays.length - 1));
-    }
-
-    function renderChart(s, t, fees, today) {
-      const hist = s.feeHistory.filter(h => h.tenant === slug);
-      const days = [];
-      for (let d = 14; d >= 1; d--) {
-        const date = new Date(today - d * 86400000 + 12 * 3600000);
-        const key = date.toISOString().slice(0, 10);
-        const h = hist.find(x => x.day === key);
-        days.push({ label: date.toLocaleDateString('ms-MY', { day: 'numeric', month: 'short' }), short: String(date.getDate()), amount: h ? h.amount : 0, count: h ? h.count : 0, today: false });
-      }
-      const tf = fees.filter(f => f.at >= today);
-      days.push({ label: 'Hari ini', short: 'Kini', amount: tf.reduce((a, f) => a + f.amount, 0), count: tf.length, today: true });
-      const total = days.reduce((a, d) => a + d.amount, 0);
-      document.getElementById('chart-total').textContent = money(total);
-
-      const box = document.getElementById('chart');
-      const W = Math.max(280, box.clientWidth || 600);
-      const key = JSON.stringify([W, days.map(d => [d.amount, d.count])]);
-      if (key === chartKey) return;
-      chartKey = key;
-      chartDays = days;
-
-      const H = 200, ml = 40, mr = 2, mt = 8, mb = 24, pw = W - ml - mr, ph = H - mt - mb;
-      const max = Math.max(10, ...days.map(d => d.amount));
-      const step = [10, 20, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000].find(x => max / x <= 4) || 20000;
-      const top = Math.ceil(max / step) * step;
-      const y = v => mt + ph - (v / top) * ph;
-      const band = pw / days.length;
-      const bw = Math.max(4, Math.min(26, band * 0.6));
-      let g = '';
-      for (let v = 0; v <= top; v += step) {
-        g += `<line class="${v ? 'ch-grid' : 'ch-base'}" x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}"/>
-          <text class="ch-ax" x="${ml - 8}" y="${y(v) + 4}" text-anchor="end">${fmtAx(v)}</text>`;
-      }
-      days.forEach((d, i) => {
-        const cx = ml + band * i + band / 2, x = cx - bw / 2, h = (d.amount / top) * ph, yy = mt + ph - h, base = mt + ph;
-        if (h > 0) {
-          const r = Math.min(2, h);
-          g += `<path class="ch-bar${d.today ? ' is-today' : ''}" data-b="${i}" d="M${x},${base} V${yy + r} Q${x},${yy} ${x + r},${yy} H${x + bw - r} Q${x + bw},${yy} ${x + bw},${yy + r} V${base} Z"/>`;
-        }
-        const show = band >= 24 || (days.length - 1 - i) % 2 === 0;
-        if (show) g += `<text class="ch-ax${d.today ? ' is-today' : ''}" x="${cx}" y="${H - 6}" text-anchor="middle">${esc(d.short)}</text>`;
-        g += `<rect class="ch-hit" data-i="${i}" x="${ml + band * i}" y="${mt}" width="${band}" height="${ph + mb}"/>`;
-      });
-      box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Carta bar yuran penyertaan harian, 14 hari lepas dan hari ini" style="display:block;max-width:100%">${g}</svg>`;
-      readout(days.length - 1);
-      if (!total) document.getElementById('chart-read').textContent = 'Belum ada bayaran yuran dalam 15 hari ini. Bayaran muncul sebaik pembida menyertai lelongan.';
-    }
-
-    const chartEl = document.getElementById('chart');
-    chartEl.addEventListener('mouseover', e => { const h = e.target.closest && e.target.closest('.ch-hit'); if (h) readout(+h.dataset.i); });
-    chartEl.addEventListener('click', e => { const h = e.target.closest && e.target.closest('.ch-hit'); if (h) readout(+h.dataset.i); });
-    chartEl.addEventListener('mouseleave', () => readout(chartDays.length - 1));
-    let rz = 0;
-    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { chartKey = ''; render(); }, 150); });
-
-    let rulesKey = '';
-    function renderRules(t) {
-      const st = t.settings;
-      const key = JSON.stringify([st, t.tiers]);
-      if (key === rulesKey) return;
-      rulesKey = key;
-      const row = (k, v) => `<div class="flex items-baseline justify-between gap-3 py-3"><dt class="text-[15px] text-ink-2">${k}</dt><dd class="tabular-nums text-[15px] text-ink text-right">${v}</dd></div>`;
-      document.getElementById('rules').innerHTML = `
-        <div class="flex items-baseline gap-3 mb-4">
-          <h2 class="font-serif text-[24px] sm:text-[28px] font-normal leading-tight text-ink">Peraturan kedai</h2>
-          <a href="${link('admin/settings.html')}" class="link-arrow ml-auto text-[15px]">Ubah</a>
-        </div>
-        <div class="border-t border-ink">
-          <dl class="divide-line">
-            ${row('Yuran penyertaan', money(st.fee))}
-            ${row('Had menang / pembida', st.winLimit ? st.winLimit + ' item' : 'Tiada had')}
-            ${row('Tempoh bayaran', st.payDeadlineHours + ' jam')}
-            ${row('Kenaikan minit akhir', st.lastWindowOn ? '×' + st.lastWindowMultiplier + ' · ' + st.lastWindowMin + ' min' : 'Tutup')}
-          </dl>
-          <div class="border-t border-line mt-0">
-            <table class="table t-open">
-              <thead><tr><th>Tier</th><th class="num">Minima</th><th class="num">Kenaikan</th></tr></thead>
-              <tbody>${t.tiers.map(x => `<tr><td class="text-ink">${esc(x.name)}</td><td class="num tabular-nums whitespace-nowrap">${money(x.minPrice)}</td><td class="num tabular-nums whitespace-nowrap">${money(x.increment)}</td></tr>`).join('')}</tbody>
-            </table>
+    <div class="a-main">
+      <!-- record bid -->
+      <section class="blk" id="rec" hidden>
+        <h2>Rekod bidaan</h2>
+        <p class="notice" id="rec-notice" hidden></p>
+        <form id="rec-form" novalidate autocomplete="off">
+          <div class="field">
+            <label class="f" for="r-name">Nama pembida</label>
+            <input class="in in-big" id="r-name" list="bidders" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
+            <datalist id="bidders"></datalist>
+            <p class="note" id="r-name-note" hidden></p>
           </div>
-        </div>`;
-    }
-
-
-    /* ---------- Mod skrin besar: full-screen projector view (lives in this page only) ---------- */
-    const Stage = (() => {
-      let el = null, itemId = null, unsub = null, tick = 0, wentFull = false, lastTopId, lastBidIds = [], opener = null;
-      const clockS = ts => new Date(ts).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      const mask = id => EB.ui.maskName(EB.users.byId(id).name);
-
-      function pick(s) {
-        const items = s.items.filter(i => i.tenant === slug);
-        const now = Date.now();
-        const cur = items.find(i => i.id === itemId);
-        if (cur) return cur;
-        const live = items.filter(i => A.status(i, now) === 'live').sort((a, b) => a.endAt - b.endAt);
-        if (live.length) return live[0];
-        const ended = items.filter(i => A.status(i, now) === 'ended').sort((a, b) => b.endAt - a.endAt);
-        return ended[0] || items[0] || null;
-      }
-
-      function build() {
-        el = document.createElement('div');
-        el.className = 'stage';
-        el.setAttribute('role', 'dialog');
-        el.setAttribute('aria-modal', 'true');
-        el.setAttribute('aria-label', 'Mod skrin besar');
-        el.hidden = true;
-        el.innerHTML = `
-          <div class="stage-top">
-            <span class="stage-mark" data-s="mark"></span>
-            <div class="min-w-0"><div class="font-medium leading-tight truncate text-[clamp(15px,1.3vw,22px)]" data-s="shop"></div>
-              <div class="leading-tight truncate text-[clamp(12px,1vw,16px)] text-[rgba(244,244,245,.6)]" data-s="event"></div></div>
-            <div class="ml-auto flex items-center gap-2">
-              <label class="sr-only" for="stage-item">Pilih item</label><select id="stage-item" class="stage-sel" data-s="pick" hidden></select>
-              <button type="button" class="stage-btn" data-s="close" aria-label="Keluar mod skrin besar (Esc)">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>Keluar<span class="hidden sm:inline text-[13px] opacity-60">Esc</span></button>
+          <div class="field">
+            <label class="f" for="r-phone">No. telefon <span class="muted">(pilihan)</span></label>
+            <input class="in" id="r-phone" type="tel" inputmode="tel" maxlength="20" autocomplete="off" enterkeyhint="next">
+            <p class="note">Tidak dipaparkan kepada umum.</p>
+          </div>
+          <div class="field">
+            <label class="f" for="r-amt">Jumlah</label>
+            <div class="amt-wrap"><span>RM</span><input id="r-amt" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done" aria-describedby="r-hint"></div>
+            <p class="hint" id="r-hint" aria-live="polite"></p>
+            <div class="quick" id="quick">
+              <button class="btn btn-outline btn-sm q-start" type="button" data-q="start">Harga mula</button>
+              <button class="btn btn-outline btn-sm" type="button" data-q="500">+RM500</button>
+              <button class="btn btn-outline btn-sm" type="button" data-q="1000">+RM1,000</button>
+              <button class="btn btn-outline btn-sm" type="button" data-q="5000">+RM5,000</button>
+              <button class="btn btn-outline btn-sm" type="button" data-q="10000">+RM10,000</button>
             </div>
           </div>
-          <div class="stage-body" data-s="body"></div>
-          <div class="stage-foot" data-s="foot"></div>`;
-        document.body.appendChild(el);
-        el.querySelector('[data-s="close"]').onclick = close;
-        el.querySelector('[data-s="pick"]').onchange = e => { itemId = e.target.value; lastTopId = undefined; lastBidIds = []; paint(true); };
-        document.addEventListener('keydown', e => { if (e.key === 'Escape' && el && !el.hidden && !document.querySelector('.eb-modal')) { e.preventDefault(); close(); } });
-        const onFs = () => {
-          const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-          if (fsEl === el) wentFull = true;
-          else if (wentFull && !el.hidden) { wentFull = false; close(); }   // Esc in full screen exits both
-        };
-        document.addEventListener('fullscreenchange', onFs);
-        document.addEventListener('webkitfullscreenchange', onFs);
-      }
+          <button class="btn rec-submit" id="r-submit" type="submit">Rekod bidaan</button>
+          <p class="err" id="rec-err" role="alert"></p>
+        </form>
+        <div class="ask ask-big" id="rec-ask" hidden>
+          <p class="q">Rekod <span class="q-amt" id="ask-amt"></span>untuk <span class="q-who" id="ask-who"></span><span class="q-ph" id="ask-ph"></span></p>
+          <p class="warn" id="ask-warn" hidden></p>
+          <div class="row">
+            <button class="btn" id="ask-yes" type="button">Ya, rekod</button>
+            <button class="btn btn-outline" id="ask-no" type="button">Ubah</button>
+          </div>
+        </div>
+      </section>
 
-      function open() {
-        if (!el) build();
-        const s = EB.store.get();
-        const it = pick(s);
-        if (!it) { toast('Tiada item untuk dipaparkan. Tambah item dahulu.', 'warn'); return; }
-        itemId = it.id; lastTopId = undefined; lastBidIds = [];
-        opener = document.activeElement;
-        el.hidden = false;
-        document.documentElement.style.overflow = 'hidden';
-        paint(true);
-        const req = el.requestFullscreen || el.webkitRequestFullscreen;
-        if (req) { try { const p = req.call(el); if (p && p.catch) p.catch(() => {}); } catch (e) { /* overlay only */ } }
-        el.querySelector('[data-s="close"]').focus({ preventScroll: true });
-        unsub = EB.store.subscribe(() => paint(false));
-        tick = setInterval(() => paint(false), 1000);
-      }
-
-      function close() {
-        if (!el || el.hidden) return;
-        el.hidden = true;
-        document.documentElement.style.overflow = '';
-        if (unsub) { const u = unsub; unsub = null; setTimeout(u, 0); }
-        clearInterval(tick);
-        const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-        if (fsEl) { wentFull = false; const ex = document.exitFullscreen || document.webkitExitFullscreen; try { const p = ex.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
-        if (opener && opener.focus) opener.focus({ preventScroll: true });
-      }
-
-      function paint(full) {
-        if (!el || el.hidden) return;
-        const s = EB.store.get();
-        const t = s.tenants.find(x => x.slug === slug);
-        const it = pick(s);
-        if (!it) { close(); return; }
-        itemId = it.id;
-        const now = Date.now();
-        const st = A.status(it, now);
-        const all = A.bidsFor(it.id, s);
-        const h = all[0];
-        const recent = s.bids.filter(b => b.itemId === it.id).sort((a, b) => b.at - a.at).slice(0, 5);
-        const left = it.endAt - now;
-        const $ = k => el.querySelector(`[data-s="${k}"]`);
-
-        if (full) {
-          $('mark').textContent = t.logoText || '';
-          $('shop').textContent = t.name;
-          $('event').textContent = t.event || t.tagline || '';
-          const items = s.items.filter(i => i.tenant === slug);
-          const sel = $('pick');
-          sel.hidden = items.length < 2;
-          sel.innerHTML = items.map(i => `<option value="${esc(i.id)}" ${i.id === it.id ? 'selected' : ''}>${esc(lotNo(i))} · ${esc(i.title.slice(0, 40))}</option>`).join('');
-          $('body').innerHTML = `
-            <img class="stage-photo" data-s="img" alt="">
-            <div class="stage-info">
-              <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1"><span class="stage-lot" data-s="lot"></span><span class="stage-k" data-s="state"></span></div>
-              <h2 class="stage-title mt-[1.2vh]" data-s="title"></h2>
-              <div class="stage-k mt-[2.4vh]" data-s="plabel"></div>
-              <div class="stage-price mt-[1vh]" data-s="price" aria-live="polite"></div>
-              <div class="stage-lead mt-[1.4vh]" data-s="lead"></div>
-              <div class="stage-stats mt-[2.4vh]">
-                <div><div class="stage-k" data-s="tlabel">Baki masa</div><div class="stage-v mt-1" data-s="clock"></div></div>
-                <div><div class="stage-k">Jumlah bidaan</div><div class="stage-v mt-1" data-s="count"></div></div>
-                <div data-s="nextbox"><div class="stage-k">Bidaan seterusnya</div><div class="stage-v mt-1" data-s="next"></div></div>
+      <!-- winner -->
+      <section class="blk" id="win" hidden>
+        <h2>Pemenang</h2>
+        <div id="win-none" hidden><p>Bidaan ditutup tanpa sebarang bidaan. Tiada pemenang.</p></div>
+        <div id="win-yes" hidden>
+          <div class="win-amt" id="w-amt"></div>
+          <div class="win-who" id="w-who"></div>
+          <div class="muted" id="w-ph"></div>
+          <form id="pay-form" style="margin-top:20px" novalidate>
+            <label class="f" for="pay-ref">Rujukan / cara bayar</label>
+            <input class="in" id="pay-ref" maxlength="80" placeholder="Contoh: Tunai, atau Pindahan – ref 1234" autocomplete="off">
+            <button class="btn btn-ok" id="pay-btn" type="submit" style="margin-top:10px;width:100%">Sah bayaran</button>
+          </form>
+          <div id="paid-box" hidden>
+            <p class="paid-line" id="paid-line"></p>
+            <button class="btn btn-outline btn-sm" id="unpaid-btn" type="button" style="margin-top:10px">Batal pengesahan</button>
+            <div class="ask" id="unpaid-ask" hidden>
+              <p>Batalkan pengesahan bayaran?</p>
+              <div class="row">
+                <button class="btn btn-danger" id="unpaid-yes" type="button">Ya, batalkan</button>
+                <button class="btn btn-outline" id="unpaid-no" type="button">Tidak</button>
               </div>
-              <div class="mt-[2.4vh]"><div class="stage-k mb-[.6vh]">Bidaan terkini</div><ul class="stage-bids" data-s="bids"></ul></div>
-            </div>`;
-          $('img').src = EB.ui.itemImage(it);
-          $('lot').textContent = lotNo(it);
-          $('title').textContent = it.title;
-          const dom = t.domain ? `Bida melalui telefon: <b>${esc(t.domain)}</b>` : '';
-          $('foot').innerHTML = [dom, t.beneficiary ? `<span class="min-w-0">${esc(t.beneficiary)}</span>` : ''].filter(Boolean).join('');
-        }
+            </div>
+          </div>
+          <p class="err" id="win-err" role="alert"></p>
+        </div>
+      </section>
 
-        // state line
-        const stateTxt = st === 'live' ? (A.isLastWindow(it, s, now) ? 'Langsung · minit akhir' : 'Langsung') : st === 'upcoming' ? 'Akan bermula' : 'Bidaan ditutup';
-        $('state').innerHTML = `<span class="stage-dot ${st === 'live' ? '' : 'off'}" aria-hidden="true"></span>${stateTxt}`;
+      <!-- status controls -->
+      <section class="blk" id="ctl">
+        <h2>Kawalan bidaan</h2>
+        <div id="ctl-draft" hidden>
+          <button class="btn" id="open-btn" type="button" style="width:100%">Buka bidaan</button>
+          <p class="note">Tetamu dan skrin projektor akan menunjukkan bidaan dibuka.</p>
+        </div>
+        <div id="ctl-open" hidden>
+          <button class="btn btn-danger" id="close-btn" type="button" style="width:100%">Tutup bidaan</button>
+          <div class="ask" id="close-ask" hidden>
+            <p id="close-q"></p>
+            <div class="row">
+              <button class="btn btn-danger" id="close-yes" type="button">Ya, tutup</button>
+              <button class="btn btn-outline" id="close-no" type="button">Batal</button>
+            </div>
+          </div>
+        </div>
+        <div id="ctl-closed" hidden>
+          <button class="btn btn-outline" id="reopen-btn" type="button" style="width:100%">Buka semula</button>
+          <p class="note" id="reopen-note"></p>
+          <div class="ask" id="reopen-ask" hidden>
+            <p>Buka semula bidaan? Pemenang semasa akan dikosongkan.</p>
+            <div class="row">
+              <button class="btn" id="reopen-yes" type="button">Ya, buka semula</button>
+              <button class="btn btn-outline" id="reopen-no" type="button">Batal</button>
+            </div>
+          </div>
+        </div>
+        <p class="err" id="ctl-err" role="alert"></p>
+      </section>
+    </div>
 
-        // price + leader
-        const ended = st === 'ended';
-        const winnerId = it.result ? it.result.winnerId : (h ? h.userId : null);
-        $('plabel').textContent = ended ? (winnerId ? 'Harga menang' : 'Harga mula') : h ? 'Bidaan tertinggi' : 'Harga mula';
-        const priceEl = $('price');
-        const amt = ended && it.result && it.result.winnerId ? it.result.amount : h ? h.amount : it.startPrice;
-        const topId = h ? h.id : null;
-        if (priceEl.textContent !== money(amt)) {
-          priceEl.textContent = money(amt);
-          if (!full && lastTopId !== undefined && topId !== lastTopId) { priceEl.classList.remove('bump'); void priceEl.offsetWidth; priceEl.classList.add('bump'); }
-        }
-        lastTopId = topId;
-        $('lead').innerHTML = ended
-          ? (winnerId ? `Pemenang: <b>${esc(mask(winnerId))}</b>` : 'Lelongan tamat tanpa bidaan.')
-          : h ? `Pembida tertinggi: <b>${esc(mask(h.userId))}</b>` : 'Belum ada bidaan. Jadilah pembida pertama.';
+    <!-- bid list -->
+    <div class="a-list">
+      <section class="blk">
+        <div class="list-head"><h2>Senarai bidaan</h2><span class="muted num" id="l-count"></span></div>
+        <ul class="bids" id="list"></ul>
+        <p class="err" id="list-err" role="alert"></p>
+      </section>
+    </div>
 
-        // stats
-        $('tlabel').textContent = st === 'upcoming' ? 'Mula dalam' : 'Baki masa';
-        const clk = $('clock');
-        clk.textContent = st === 'upcoming' ? EB.ui.countdown(it.startAt - now) : EB.ui.countdown(left);
-        clk.classList.toggle('is-soon', st === 'live' && left < 5 * 60000);
-        $('count').textContent = all.length.toLocaleString('en-MY');
-        $('nextbox').hidden = ended;
-        if (!ended) $('next').textContent = money(A.minNextBid(it, s));
+    <!-- tools -->
+    <div class="a-tools">
+      <section class="blk">
+        <button class="btn btn-outline" id="csv-btn" type="button" style="width:100%">Muat turun CSV</button>
+        <p class="note">Senarai semua bidaan dengan nombor telefon, untuk bendahari.</p>
+      </section>
+      <details id="set">
+        <summary>Tetapan</summary>
+        <form class="det-body" id="set-form" novalidate>
+          <div class="two">
+            <div class="field">
+              <label class="f" for="t-start">Harga mula (RM)</label>
+              <input class="in num" id="t-start" inputmode="numeric" autocomplete="off">
+            </div>
+            <div class="field">
+              <label class="f" for="t-inc">Kenaikan minimum (0 = bebas)</label>
+              <input class="in num" id="t-inc" inputmode="numeric" autocomplete="off">
+            </div>
+          </div>
+          <p class="note" id="t-lock" hidden style="margin:-8px 0 16px">Harga mula dan kenaikan dikunci kerana sudah ada bidaan.</p>
+          <div class="field">
+            <label class="f" for="t-bank">Bank</label>
+            <input class="in" id="t-bank" maxlength="160" autocomplete="off">
+          </div>
+          <div class="field">
+            <label class="f" for="t-accname">Nama akaun</label>
+            <input class="in" id="t-accname" maxlength="160" autocomplete="off">
+          </div>
+          <div class="field">
+            <label class="f" for="t-accno">No. akaun</label>
+            <input class="in num" id="t-accno" maxlength="160" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="field">
+            <label class="f" for="t-note">Nota bayaran</label>
+            <textarea class="in" id="t-note" maxlength="160" rows="3"></textarea>
+            <p class="note">Dipaparkan pada skrin projektor semasa pemenang diumumkan, hanya jika diisi.</p>
+          </div>
+          <button class="btn" id="t-save" type="submit">Simpan tetapan</button>
+          <p class="err" id="set-err" role="alert"></p>
+        </form>
+      </details>
+      <details class="danger">
+        <summary>Zon bahaya</summary>
+        <div class="det-body">
+          <p>Reset memadam semua bidaan, status dan pemenang. Salinan disimpan di server. Harga dan butiran bayaran kekal.</p>
+          <label class="f" for="z-confirm" style="margin-top:14px">Taip RESET untuk sahkan</label>
+          <input class="in" id="z-confirm" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <button class="btn btn-danger" id="z-btn" type="button" disabled style="margin-top:10px;width:100%">Reset bidaan</button>
+          <p class="err" id="z-err" role="alert"></p>
+        </div>
+      </details>
+    </div>
+  </div>
+</main>
 
-        // latest 5 bids (newest first)
-        const ids = recent.map(b => b.id);
-        if (full || ids.join() !== lastBidIds.join()) {
-          const fresh = full ? [] : ids.filter(id => !lastBidIds.includes(id));
-          $('bids').innerHTML = recent.length
-            ? recent.map(b => `<li class="${fresh.includes(b.id) ? 'stage-new' : ''}"><span>${esc(clockS(b.at))}</span><span class="truncate">${esc(mask(b.userId))}</span><span class="amt">${money(b.amount)}</span></li>`).join('')
-            : `<li class="!grid-cols-1 !font-normal"><span>${ended ? 'Tiada bidaan direkodkan untuk lot ini.' : 'Bidaan akan dipaparkan di sini sebaik diterima.'}</span></li>`;
-          lastBidIds = ids;
-        }
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="../assets/lot.js"></script>
+<script src="../assets/live.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const money = Live.money, esc = Live.esc;
+  const KEY = 'ebid-admin-pin';
+
+  let pin = '';
+  let S = null;              // full admin state
+  let busy = false;          // one admin request at a time
+  const ui = { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false,
+    autoPhone: '', mine: new Set(), setDirty: false, noticeTimer: null };
+
+  if (window.LOT) { $('org').textContent = LOT.org || $('org').textContent; $('s-lot').textContent = LOT.shortTitle || ''; }
+
+  /* ---------- PIN storage: localStorage, else sessionStorage, else memory ---------- */
+  let memPin = '';
+  function storeGet() {
+    for (const s of ['localStorage', 'sessionStorage']) { try { const v = window[s].getItem(KEY); if (v) return v; } catch (e) {} }
+    return memPin;
+  }
+  function storeSet(v) {
+    memPin = v;
+    try { localStorage.setItem(KEY, v); return; } catch (e) {}
+    try { sessionStorage.setItem(KEY, v); } catch (e) {}
+  }
+  function storeClear() {
+    memPin = '';
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    try { sessionStorage.removeItem(KEY); } catch (e) {}
+  }
+
+  /* ---------- helpers ---------- */
+  const pad = n => String(n).padStart(2, '0');
+  const hm = t => { const d = new Date(t * 1000); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  const stamp = t => { const d = new Date(t * 1000); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+  const lastBid = st => st && st.bids.length ? st.bids[st.bids.length - 1] : null;
+  const parseAmt = v => { const d = String(v || '').split('.')[0].replace(/[^\d]/g, ''); return d ? parseInt(d, 10) : 0; };
+  const show = (el, on) => { el.hidden = !on; };
+
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+  }
+
+  async function post(body, usePin) {
+    let r, j = null;
+    try {
+      r = await fetch(Live.API, { method: 'POST', cache: 'no-store',
+        headers: { 'X-Pin': usePin || pin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    } catch (e) { throw new Error('Tiada sambungan ke server. Cuba lagi.'); }
+    try { j = await r.json(); } catch (e) {}
+    if (r.status === 401) { const e = new Error('PIN salah.'); e.auth = true; throw e; }
+    if (!j || !j.ok) throw new Error((j && j.error) || 'Ralat server (' + r.status + '). Cuba lagi.');
+    return j.state;
+  }
+
+  /* Run an admin action. Applies the returned state; on error shows it in errEl and refreshes. */
+  async function act(body, errEl, btn) {
+    if (busy) return null;
+    busy = true; if (btn) btn.disabled = true;
+    if (errEl) errEl.textContent = '';
+    try {
+      const st = await post(body);
+      apply(st);
+      return st;
+    } catch (e) {
+      if (e.auth) { logout('PIN telah ditukar. Masukkan PIN baharu.'); return null; }
+      if (errEl) errEl.textContent = e.message;
+      busy = false; refresh();
+      return null;
+    } finally {
+      busy = false; if (btn) btn.disabled = false;
+      if (S) render();
+    }
+  }
+
+  let refreshing = false, again = false;
+  async function refresh() {
+    if (!pin) return;
+    if (refreshing) { again = true; return; }
+    refreshing = true;
+    try { apply(await post({ action: 'login' })); }
+    catch (e) { if (e.auth) logout('PIN telah ditukar. Masukkan PIN baharu.'); }
+    finally { refreshing = false; if (again) { again = false; refresh(); } }
+  }
+
+  /* ---------- auth ---------- */
+  function showGate(msg) {
+    show($('boot'), false); show($('console'), false); show($('logout'), false); show($('gate'), true);
+    $('gate-err').textContent = msg || '';
+    $('pin').value = '';
+    setTimeout(() => $('pin').focus(), 0);
+  }
+  function showConsole() {
+    show($('boot'), false); show($('gate'), false); show($('console'), true); show($('logout'), true);
+  }
+  function logout(msg) {
+    pin = ''; S = null; storeClear();
+    Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, setDirty: false });
+    showGate(msg);
+  }
+
+  $('gate-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const v = $('pin').value.trim();
+    if (!v) { $('gate-err').textContent = 'Masukkan PIN.'; return; }
+    const b = $('gate-btn'); b.disabled = true; b.textContent = 'Menyemak…'; $('gate-err').textContent = '';
+    try {
+      const st = await post({ action: 'login' }, v);
+      pin = v; storeSet(v); $('pin').value = '';
+      showConsole(); apply(st);
+    } catch (err) {
+      $('gate-err').textContent = err.auth ? 'PIN salah.' : err.message;
+      $('pin').value = ''; $('pin').focus();
+    } finally { b.disabled = false; b.textContent = 'Masuk'; }
+  });
+  $('logout').addEventListener('click', () => logout(''));
+
+  /* ---------- state ---------- */
+  function apply(st) {
+    if (!st) return;
+    if (S && st.version < S.version) return;            // older than what we have
+    const prev = S;
+    S = st;
+    const pl = lastBid(prev), nl = lastBid(st);
+
+    // a bid recorded on another device
+    if (prev && nl && st.bids.length > prev.bids.length && !ui.mine.has(nl.id)) {
+      const n = $('rec-notice');
+      n.textContent = 'Bidaan baharu dari peranti lain: ' + money(nl.amount) + ' oleh ' + nl.name + '.';
+      n.hidden = false; clearTimeout(ui.noticeTimer); ui.noticeTimer = setTimeout(() => { n.hidden = true; }, 10000);
+    }
+    // pending confirm is now stale
+    if (ui.ask && (st.status !== 'open' || ui.ask.amount < st.minNext)) {
+      ui.ask = null;
+      if (st.status === 'open') $('rec-err').textContent = 'Ada bidaan baharu' + (nl ? ' ' + money(nl.amount) + ' oleh ' + nl.name : '') + '. ' + floorText(st) + '. Semak semula.';
+    }
+    if (ui.undoId && (!nl || nl.id !== ui.undoId || st.status !== 'open')) ui.undoId = null;
+    if (st.status !== 'open') ui.closeAsk = false;
+    if (st.status !== 'closed') ui.reopenAsk = false;
+    if (!st.paid) ui.unpaidAsk = false;
+
+
+    render((pl && pl.id) !== (nl && nl.id));
+  }
+
+  /* ---------- render ---------- */
+  function render(newTop) {
+    if (!S) return;
+    const st = S, top = lastBid(st), n = st.bids.length;
+    const open = st.status === 'open', closed = st.status === 'closed';
+
+    // summary
+    const chip = $('s-status');
+    chip.className = 'status' + (open ? ' open' : closed ? ' closed' : '');
+    chip.textContent = open ? 'Bidaan dibuka' : closed ? 'Bidaan ditutup' : 'Belum dibuka';
+    if (top) {
+      $('s-label').textContent = closed ? 'Pemenang' : 'Bidaan tertinggi';
+      $('s-amt').textContent = money(top.amount);
+      $('s-who').innerHTML = esc(top.name) + (top.phone ? ' <span class="ph">· ' + esc(top.phone) + '</span>' : '');
+    } else {
+      $('s-label').textContent = 'Harga mula';
+      $('s-amt').textContent = money(st.startPrice);
+      $('s-who').textContent = closed ? 'Ditutup tanpa bidaan' : 'Belum ada bidaan';
+    }
+    show($('s-edit'), !top && !closed);
+    $('s-count').textContent = n + ' bidaan';
+    $('s-next').innerHTML = top ? 'Bidaan semasa <b>' + money(top.amount) + '</b>' : '';
+    show($('s-next'), !!top && !closed);
+    $('s-inc').textContent = st.increment > 0 ? 'Kenaikan minimum ' + money(st.increment) : '';
+    show($('s-inc'), st.increment > 0);
+
+    // controls
+    show($('ctl-draft'), st.status === 'draft');
+    show($('ctl-open'), open);
+    show($('ctl-closed'), closed);
+    show($('close-btn'), !ui.closeAsk);
+    show($('close-ask'), ui.closeAsk);
+    if (ui.closeAsk) {
+      $('close-q').innerHTML = top
+        ? 'Tutup bidaan sekarang? Pemenang: <b>' + esc(top.name) + '</b> <b class="num">' + money(top.amount) + '</b>'
+        : 'Tutup bidaan sekarang? Tiada bidaan, jadi tiada pemenang.';
+    }
+    $('reopen-btn').disabled = !!st.paid;
+    $('reopen-note').textContent = st.paid ? 'Batalkan pengesahan bayaran dahulu untuk membuka semula.' : '';
+    show($('reopen-btn'), !ui.reopenAsk);
+    show($('reopen-ask'), ui.reopenAsk);
+
+    // record form
+    show($('rec'), open);
+    show($('rec-form'), open && !ui.ask);
+    show($('rec-ask'), open && !!ui.ask);
+    if (ui.ask) {
+      $('ask-amt').textContent = money(ui.ask.amount);
+      $('ask-who').textContent = ui.ask.name + '?';
+      $('ask-ph').textContent = ui.ask.phone ? 'Telefon: ' + ui.ask.phone : 'Tiada no. telefon';
+      const base = top ? top.amount : st.startPrice;
+      const jump = ui.ask.amount - base;
+      const w = $('ask-warn');
+      w.hidden = !(jump >= 10000 && ui.ask.amount >= base * 1.5);
+      w.textContent = 'Perhatian: ' + money(jump) + ' lebih tinggi daripada ' + (top ? 'bidaan semasa' : 'harga mula') + '. Pastikan jumlah betul.';
+    }
+    renderDatalist();
+    renderQuick();
+    renderHint();
+
+    // winner
+    show($('win'), closed);
+    const w = st.winner;
+    show($('win-none'), closed && !w);
+    show($('win-yes'), closed && !!w);
+    if (w) {
+      $('w-amt').textContent = money(w.amount);
+      $('w-who').textContent = w.name;
+      $('w-ph').textContent = w.phone ? 'Telefon: ' + w.phone : 'Tiada no. telefon';
+      show($('pay-form'), !st.paid);
+      show($('paid-box'), !!st.paid);
+      if (st.paid) $('paid-line').textContent = 'Dibayar pada ' + hm(st.paid.at) + (st.paid.ref ? ' · ' + st.paid.ref : '');
+      show($('unpaid-btn'), !ui.unpaidAsk);
+      show($('unpaid-ask'), ui.unpaidAsk);
+    }
+
+    renderList(newTop);
+    renderSettings();
+  }
+
+  let dlKey = '';
+  function bidders() {
+    const m = new Map();     // lower-case name -> {name, phone}
+    for (const b of S.bids) {
+      const k = b.name.toLowerCase(), cur = m.get(k);
+      m.set(k, { name: b.name, phone: b.phone || (cur ? cur.phone : '') });
+    }
+    return m;
+  }
+  function renderDatalist() {
+    const names = [...bidders().values()].map(x => x.name).reverse();
+    const key = names.join('\n');
+    if (key === dlKey) return;
+    dlKey = key;
+    $('bidders').innerHTML = names.map(nm => '<option value="' + esc(nm) + '"></option>').join('');
+  }
+
+  /* quick amounts: relative to the current highest, or to the start price for the first bid */
+  function quickValue(q) {
+    const t = lastBid(S);
+    if (q === 'start') return S.startPrice;
+    return (t ? t.amount : S.startPrice) + Number(q);
+  }
+  function floorText(st) {
+    const t = lastBid(st);
+    if (!t) return 'Sekurang-kurangnya harga mula ' + money(st.startPrice);
+    return st.increment > 0 ? 'Sekurang-kurangnya ' + money(st.minNext) + ' (kenaikan minimum ' + money(st.increment) + ')'
+      : 'Mesti lebih tinggi daripada ' + money(t.amount);
+  }
+  function renderQuick() {
+    const first = !lastBid(S);
+    for (const b of $('quick').querySelectorAll('[data-q]')) {
+      const q = b.dataset.q, v = quickValue(q);
+      if (q === 'start') { b.textContent = 'Harga mula ' + money(v); b.hidden = !first; }
+      else b.textContent = '+' + money(Number(q));
+      b.title = money(v);
+      b.disabled = v < S.minNext;
+    }
+  }
+  function renderHint() {
+    const v = parseAmt($('r-amt').value), h = $('r-hint');
+    const top = lastBid(S);
+    let ok = false;
+    if (!v) { h.className = 'hint muted'; h.textContent = floorText(S) + '.'; }
+    else if (v < S.minNext) { h.className = 'hint bad'; h.textContent = floorText(S) + '.'; }
+    else if (v > 50000000) { h.className = 'hint bad'; h.textContent = 'Jumlah terlalu besar. Semak semula.'; }
+    else {
+      ok = true; h.className = 'hint';
+      h.innerHTML = '<b>' + money(v) + '</b> <span class="muted">· ' +
+        (top ? 'naik ' + money(v - top.amount) + ' daripada ' + money(top.amount) : (v === S.startPrice ? 'harga mula' : money(v - S.startPrice) + ' atas harga mula')) + '</span>';
+    }
+    $('r-submit').disabled = !ok;
+    return ok;
+  }
+
+  function renderList(newTop) {
+    const st = S, list = $('list'), n = st.bids.length;
+    $('l-count').textContent = n ? n + ' bidaan' : '';
+    if (!n) { list.innerHTML = '<li class="empty">Belum ada bidaan.</li>'; return; }
+    const open = st.status === 'open';
+    let html = '';
+    for (let i = n - 1; i >= 0; i--) {
+      const b = st.bids[i], newest = i === n - 1;
+      html += '<li data-id="' + esc(b.id) + '"><div class="bid-row"><div class="who"><b>' + esc(b.name) + '</b>' +
+        '<span class="t num">' + (b.phone ? esc(b.phone) + ' · ' : '') + esc(Live.time(b.at)) + '</span></div>' +
+        '<div class="bid-right"><span class="amt">' + money(b.amount) + '</span>' +
+        (newest && open && ui.undoId !== b.id ? '<button class="btn btn-outline btn-sm" type="button" data-undo="' + esc(b.id) + '">Batal</button>' : '') +
+        '</div></div>';
+      if (newest && open && ui.undoId === b.id) {
+        html += '<div class="ask"><p>Batalkan bidaan <b class="num">' + money(b.amount) + '</b> oleh <b>' + esc(b.name) + '</b>?</p>' +
+          '<div class="row"><button class="btn btn-danger" type="button" data-undo-yes="' + esc(b.id) + '">Ya, batalkan</button>' +
+          '<button class="btn btn-outline" type="button" data-undo-no="1">Tidak</button></div></div>';
       }
+      html += '</li>';
+    }
+    list.innerHTML = html;
+    if (newTop) { const li = list.firstElementChild; li.classList.remove('flash'); void li.offsetWidth; li.classList.add('flash'); }
+  }
 
-      return { open, close };
-    })();
-    document.getElementById('btn-stage').onclick = () => Stage.open();
+  function renderSettings() {
+    const locked = S.bids.length > 0;
+    $('t-start').disabled = locked; $('t-inc').disabled = locked;
+    show($('t-lock'), locked);
+    const form = $('set-form');
+    if (ui.setDirty || form.contains(document.activeElement)) return;
+    $('t-start').value = S.startPrice; $('t-inc').value = S.increment;
+    const p = S.payment || {};
+    $('t-bank').value = p.bank || ''; $('t-accname').value = p.accName || ''; $('t-accno').value = p.accNo || ''; $('t-note').value = p.note || '';
+  }
 
-    let raf = 0;
-    const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); };
+  /* ---------- record bid ---------- */
+  const nameEl = $('r-name'), phoneEl = $('r-phone'), amtEl = $('r-amt');
+  nameEl.addEventListener('input', () => {
+    $('rec-err').textContent = '';
+    const known = S && bidders().get(nameEl.value.trim().replace(/\s+/g, ' ').toLowerCase());
+    const note = $('r-name-note');
+    if (known) {
+      if (known.phone && (!phoneEl.value || phoneEl.value === ui.autoPhone)) { phoneEl.value = known.phone; ui.autoPhone = known.phone; }
+      note.textContent = 'Pembida sedia ada' + (known.phone ? '. No. telefon diisi daripada bidaan terakhirnya.' : '.');
+      note.hidden = false;
+    } else {
+      if (ui.autoPhone && phoneEl.value === ui.autoPhone) phoneEl.value = '';
+      ui.autoPhone = ''; note.hidden = true;
+    }
+  });
+  phoneEl.addEventListener('input', () => { ui.autoPhone = ''; });
+  amtEl.addEventListener('input', () => { $('rec-err').textContent = ''; renderHint(); });
+  $('quick').addEventListener('click', e => {
+    const b = e.target.closest('[data-q]'); if (!b || !S) return;
+    amtEl.value = String(quickValue(b.dataset.q));
+    $('rec-err').textContent = '';
+    renderHint();
+  });
+
+  $('rec-form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!S || S.status !== 'open') return;
+    const name = nameEl.value.trim().replace(/\s+/g, ' ');
+    if (!name) { $('rec-err').textContent = 'Masukkan nama pembida.'; nameEl.focus(); return; }
+    if (!renderHint()) { amtEl.focus(); return; }
+    $('rec-err').textContent = '';
+    ui.ask = { name, phone: phoneEl.value.trim(), amount: parseAmt(amtEl.value) };
     render();
-    EB.store.subscribe(schedule);
-    setInterval(schedule, 5000);
-  </script>
+    $('ask-yes').focus();
+  });
+  // Enter in name/phone moves on instead of submitting early
+  nameEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); phoneEl.focus(); } });
+  phoneEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); amtEl.focus(); amtEl.select(); } });
+
+  async function confirmBid() {
+    if (!ui.ask || busy) return;
+    const body = Object.assign({ action: 'bid' }, ui.ask);
+    ui.ask = null;            // sent: our own reply must not be read as a stale confirm
+    const st = await act(body, $('rec-err'), $('ask-yes'));
+    if (st) {
+      const nl = lastBid(st); if (nl) ui.mine.add(nl.id);
+      $('rec-notice').hidden = true;
+      ui.autoPhone = '';
+      nameEl.value = ''; phoneEl.value = ''; amtEl.value = '';
+      $('r-name-note').hidden = true;
+      render();
+      nameEl.focus();
+      toast('Direkod');
+    } else {
+      // server refused (e.g. a higher bid came in): back to the form; the hint shows the new floor
+      render();
+      amtEl.focus(); amtEl.select();
+    }
+  }
+  function cancelAsk() { ui.ask = null; render(); amtEl.focus(); }
+  $('ask-yes').addEventListener('click', confirmBid);
+  $('ask-no').addEventListener('click', cancelAsk);
+  document.addEventListener('keydown', e => {
+    if (!ui.ask || $('rec-ask').hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); cancelAsk(); }
+    else if (e.key === 'Enter' && document.activeElement !== $('ask-no')) { e.preventDefault(); confirmBid(); }
+  });
+
+  /* ---------- bid list: undo ---------- */
+  $('list').addEventListener('click', async e => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.undo) { ui.undoId = t.dataset.undo; render(); const y = $('list').querySelector('[data-undo-yes]'); if (y) y.focus(); }
+    else if (t.dataset.undoNo) { ui.undoId = null; render(); }
+    else if (t.dataset.undoYes) {
+      const st = await act({ action: 'undo', id: t.dataset.undoYes }, $('list-err'), t);
+      ui.undoId = null;
+      if (st) { render(); toast('Bidaan dibatalkan'); }
+    }
+  });
+
+  /* ---------- status controls ---------- */
+  $('open-btn').addEventListener('click', async e => {
+    const st = await act({ action: 'open' }, $('ctl-err'), e.currentTarget);
+    if (st) { toast('Bidaan dibuka'); if (window.matchMedia('(min-width: 900px)').matches) nameEl.focus(); }
+  });
+  $('close-btn').addEventListener('click', () => { ui.closeAsk = true; render(); $('close-yes').focus(); });
+  $('close-no').addEventListener('click', () => { ui.closeAsk = false; render(); });
+  $('close-yes').addEventListener('click', async e => {
+    const st = await act({ action: 'close' }, $('ctl-err'), e.currentTarget);
+    ui.closeAsk = false; if (S) render();
+    if (st) toast('Bidaan ditutup');
+  });
+  $('reopen-btn').addEventListener('click', () => { ui.reopenAsk = true; render(); });
+  $('reopen-no').addEventListener('click', () => { ui.reopenAsk = false; render(); });
+  $('reopen-yes').addEventListener('click', async e => {
+    const st = await act({ action: 'reopen' }, $('ctl-err'), e.currentTarget);
+    ui.reopenAsk = false; if (S) render();
+    if (st) toast('Bidaan dibuka semula');
+  });
+
+  /* ---------- payment ---------- */
+  $('pay-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const st = await act({ action: 'paid', ref: $('pay-ref').value.trim() }, $('win-err'), $('pay-btn'));
+    if (st) { $('pay-ref').value = ''; toast('Bayaran disahkan'); }
+  });
+  $('unpaid-btn').addEventListener('click', () => { ui.unpaidAsk = true; render(); });
+  $('unpaid-no').addEventListener('click', () => { ui.unpaidAsk = false; render(); });
+  $('unpaid-yes').addEventListener('click', async e => {
+    const st = await act({ action: 'unpaid' }, $('win-err'), e.currentTarget);
+    ui.unpaidAsk = false; if (S) render();
+    if (st) toast('Pengesahan dibatalkan');
+  });
+
+  /* ---------- settings ---------- */
+  $('set-form').addEventListener('input', () => { ui.setDirty = true; });
+  $('set-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const body = { action: 'settings', bank: $('t-bank').value, accName: $('t-accname').value, accNo: $('t-accno').value, note: $('t-note').value };
+    if (!S.bids.length) {
+      const sp = parseAmt($('t-start').value), inc = parseAmt($('t-inc').value);
+      if (sp < 1) { $('set-err').textContent = 'Harga mula mesti lebih daripada 0.'; return; }
+      body.startPrice = sp; body.increment = inc;
+    }
+    const st = await act(body, $('set-err'), $('t-save'));
+    if (st) { ui.setDirty = false; document.activeElement.blur(); renderSettings(); toast('Tetapan disimpan'); }
+  });
+
+  /* ---------- CSV ---------- */
+  function csvName(d) {
+    d = d || new Date();
+    return 'bidaan-paskb-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.csv';
+  }
+  function buildCSV(st) {
+    const cell = (v, text) => {
+      let s = String(v == null ? '' : v);
+      if (text && /^[=+\-@\t\r]/.test(s)) s = "'" + s;      // stop spreadsheet formulas
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+    const rows = [['No', 'Masa', 'Nama', 'Telefon', 'Jumlah RM'].map(x => cell(x))];
+    st.bids.forEach((b, i) => rows.push([cell(i + 1), cell(stamp(b.at)), cell(b.name, true), cell(b.phone, /^[=\-@]/.test(b.phone || '')), cell(b.amount)]));
+    if (st.winner) {
+      rows.push([]);
+      rows.push([cell('Pemenang'), cell(st.closedAt ? stamp(st.closedAt) : ''), cell(st.winner.name, true), cell(st.winner.phone, /^[=\-@]/.test(st.winner.phone || '')), cell(st.winner.amount)]);
+      rows.push(st.paid
+        ? [cell('Bayaran disahkan'), cell(stamp(st.paid.at)), cell(st.paid.ref || '', true), cell(''), cell('')]
+        : [cell('Bayaran'), cell(''), cell('Belum disahkan'), cell(''), cell('')]);
+    } else if (st.status === 'closed') {
+      rows.push([]); rows.push([cell('Pemenang'), cell(''), cell('Tiada (ditutup tanpa bidaan)'), cell(''), cell('')]);
+    }
+    return rows.map(r => r.join(',')).join('\r\n') + '\r\n';
+  }
+  $('csv-btn').addEventListener('click', () => {
+    if (!S) return;
+    const blob = new Blob(['﻿' + buildCSV(S)], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = csvName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+
+  /* ---------- reset ---------- */
+  $('z-confirm').addEventListener('input', () => { $('z-btn').disabled = $('z-confirm').value.trim() !== 'RESET'; });
+  $('z-btn').addEventListener('click', async e => {
+    if ($('z-confirm').value.trim() !== 'RESET') return;
+    const st = await act({ action: 'reset', confirm: 'RESET' }, $('z-err'), e.currentTarget);
+    if (st) {
+      $('z-confirm').value = ''; $('z-btn').disabled = true;
+      Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false });
+      amtEl.value = ''; render();
+      toast('Data bidaan direset');
+    } else $('z-btn').disabled = $('z-confirm').value.trim() !== 'RESET';
+  });
+
+  /* ---------- live sync ---------- */
+  const conn = $('conn');
+  Live.watch(pub => {
+    if (pin && (!S || pub.version > S.version)) refresh();
+  }, (ok, fails) => {
+    conn.classList.toggle('bad', !ok && fails > 1);
+    conn.textContent = ok ? 'Bersambung · ' + Live.time(Date.now() / 1000)
+      : (fails > 1 ? 'Sambungan terputus. Mencuba semula…' : 'Menyambung semula…');
+  }, 1500);
+
+  /* ---------- boot ---------- */
+  (async function boot() {
+    const saved = storeGet();
+    if (!saved) { showGate(''); return; }
+    try {
+      const st = await post({ action: 'login' }, saved);
+      pin = saved; showConsole(); apply(st);
+    } catch (e) {
+      if (e.auth) { storeClear(); showGate('PIN telah ditukar. Masukkan PIN baharu.'); }
+      else showGate(e.message);
+    }
+  })();
+})();
+  document.getElementById('s-edit').addEventListener('click', () => {
+    const d = document.getElementById('set'); d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => { const i = document.getElementById('t-start'); i.focus(); i.select(); }, 350);
+  });
+</script>
 </body>
 </html>

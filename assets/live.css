@@ -1,0 +1,63 @@
+/* eBid Majlis: "Monokrom Premium" (see DESIGN.md). White ground, near-black ink, Barlow,
+ * black 8px buttons, grey tiles. Brand green only for small identity accents. */
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600&family=Barlow+Semi+Condensed:wght@400;500&display=swap');
+
+:root {
+  --paper: #ffffff; --tile: #eeeff2; --ink: #010205; --ink-2: #313236; --muted: #6b6d70;
+  --line: #d8d8db; --line-strong: #949598;
+  --brand: #0b6b3a; --live: #c4281c; --live-soft: #fbeae8; --ok: #17784a; --ok-soft: #e6f3ec; --warn: #9a5b00; --warn-soft: #fbf0dc;
+  --font: 'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Barlow Semi Condensed', 'Barlow', ui-sans-serif, system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: -.01em; line-height: 1.12; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+img, video { display: block; max-width: 100%; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.eyebrow { font-size: 13px; letter-spacing: .02em; color: var(--muted); }
+.muted { color: var(--muted); }
+
+/* status chip */
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+.status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+.status.open { color: var(--live); }
+.status.open::before { background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
+.status.closed { color: var(--ink); }
+.status.closed::before { background: var(--ink); }
+@keyframes pulse { 50% { opacity: .25; } }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 8px; border: 1px solid var(--ink); background: var(--ink); color: #fff; font: 500 16px/1 var(--font); cursor: pointer; text-decoration: none; }
+.btn:hover { background: var(--ink-2); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-outline { background: #fff; color: var(--ink); }
+.btn-outline:hover { background: var(--tile); }
+.btn-danger { background: var(--live); border-color: var(--live); }
+.btn-danger:hover { background: #a32016; }
+.btn-ok { background: var(--ok); border-color: var(--ok); }
+.btn-sm { min-height: 40px; padding: 0 14px; font-size: 15px; }
+
+/* fields */
+label.f { display: block; font-size: 14px; color: var(--ink-2); margin-bottom: 6px; }
+input.in, textarea.in { width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 8px; font: 400 16px var(--font); color: var(--ink); background: #fff; }
+input.in:focus, textarea.in:focus { outline: 2px solid var(--ink); outline-offset: -1px; border-color: var(--ink); }
+
+/* bid list */
+.bids { list-style: none; margin: 0; padding: 0; }
+.bids li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.bids li:first-child .amt { font-weight: 600; }
+.bids .who { min-width: 0; overflow-wrap: anywhere; }
+.bids .amt { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bids .t { font-size: 13px; color: var(--muted); }
+.flash { animation: flash 1.4s ease-out; }
+@keyframes flash { 0% { background: var(--warn-soft); } 100% { background: transparent; } }
+
+.conn { font-size: 13px; color: var(--muted); }
+.conn.bad { color: var(--live); }
+.tile { background: var(--tile); border-radius: 8px; }
+[hidden] { display: none !important; }
