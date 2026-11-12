@@ -882,7 +882,7 @@
         let amount = isFinite(wanted) ? wanted : min;
         let note = '';
         if (!(amount >= min)) {
-          note = `Bidaan lain masuk semasa anda membayar. Amaun anda ${money(amount)} kini di bawah bidaan minima, jadi kami tukar kepada ${money(min)}.`;
+          note = `Bidaan lain masuk semasa anda membayar. Amaun anda ${money(amount)} kini di bawah bidaan minima, jadi amaun ditukar kepada ${money(min)}.`;
           amount = min;
         }
         $('amt').value = amount; edited = true;

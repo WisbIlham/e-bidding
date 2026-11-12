@@ -15,8 +15,8 @@
   <script src="../assets/ui.js?v=20261112d"></script>
   <style>
     .swatch { height: 44px; width: 52px; border-radius: 8px; border: 1px solid var(--line-strong); padding: 3px; background: var(--surface); cursor: pointer; flex: none; }
-    .sec { padding: 2.25rem 0 2.5rem; }
-    @media (min-width: 640px) { .sec { padding: 2.75rem 0 3rem; } }
+    .sec { padding: 0 0 2.5rem; }
+    .sec[hidden] { display: none; }
     .sec-h { font-family: var(--font-display); font-size: 26px; font-weight: 400; line-height: 1.15; letter-spacing: -.01em; color: var(--ink); }
     .sec-d { font-size: 15px; color: var(--muted); margin-top: .35rem; max-width: 40rem; }
     .row-act { font-size: 14px; font-weight: 400; color: var(--muted); padding: .35rem .5rem; border-radius: 6px; min-height: 44px; }
@@ -50,14 +50,24 @@
   <main class="max-w-6xl mx-auto px-4 md:px-6 pt-10 pb-8 sm:pt-14" id="app">
     <div class="mb-8 sm:mb-10">
       <h1 class="font-serif text-[36px] sm:text-[40px] font-normal leading-[1.1] tracking-[-0.01em] text-ink">Tetapan & jenama</h1>
-      <p class="mt-2 text-[16px] text-muted max-w-2xl">Jenama kedai, domain dan peraturan lelongan. Perubahan hanya diterbitkan selepas anda simpan.</p>
+      <p class="mt-2 text-[16px] text-muted max-w-2xl">Pilih bahagian di bawah. Perubahan hanya diterbitkan selepas anda simpan.</p>
     </div>
+    <nav class="tabs mb-8 sm:mb-10 -mx-4 px-4 md:mx-0 md:px-0" id="set-tabs" role="tablist" aria-label="Bahagian tetapan">
+      <a href="#jenama" class="tab" data-go="jenama" role="tab">Jenama</a>
+      <a href="#acara" class="tab" data-go="acara" role="tab">Acara</a>
+      <a href="#peraturan" class="tab" data-go="peraturan" role="tab">Peraturan</a>
+      <a href="#tier" class="tab" data-go="tier" role="tab">Tier harga</a>
+      <a href="#terima" class="tab" data-go="terima" role="tab">Cara terima</a>
+      <a href="#bayarcash" class="tab" data-go="bayarcash" role="tab">Bayarcash</a>
+      <a href="#pixel" class="tab" data-go="pixel" role="tab">Facebook Pixel</a>
+      <a href="#domain" class="tab" data-go="domain" role="tab">Domain</a>
+    </nav>
 
-    <div class="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_340px] gap-x-14 gap-y-12 items-start">
-      <form id="f" class="divide-line border-t border-ink min-w-0" autocomplete="off" novalidate onsubmit="return false">
+    <div id="set-grid" class="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_340px] gap-x-14 gap-y-12 items-start">
+      <form id="f" class="min-w-0" autocomplete="off" novalidate onsubmit="return false">
 
         <!-- Branding -->
-        <section class="sec">
+        <section data-tab="jenama" class="sec">
           <h2 class="sec-h">Jenama kedai</h2>
           <p class="sec-d">Nama kedai yang dilihat oleh pembida.</p>
           <div class="grid sm:grid-cols-2 gap-4 mt-5">
@@ -90,7 +100,7 @@
         </section>
 
         <!-- Event & beneficiary -->
-        <section class="sec">
+        <section data-tab="acara" class="sec">
           <h2 class="sec-h">Acara & penerima manfaat</h2>
           <p class="sec-d">Pilihan. Untuk lelongan amal atau kutipan derma; dipaparkan di halaman kedai.</p>
           <div class="space-y-4 mt-5">
@@ -101,7 +111,7 @@
         </section>
 
         <!-- Domain -->
-        <section class="sec">
+        <section data-tab="domain" class="sec">
           <h2 class="sec-h">Domain sendiri</h2>
           <p class="sec-d">Pembida melawat kedai anda melalui domain anda sendiri.</p>
           <div class="mt-5" data-field>
@@ -125,7 +135,7 @@
         </section>
 
         <!-- Rules -->
-        <section class="sec">
+        <section data-tab="peraturan" class="sec">
           <h2 class="sec-h">Peraturan lelongan</h2>
           <p class="sec-d">Mengikut model JPJeBid: yuran penyertaan, had menang dan kenaikan minit akhir.</p>
           <div class="grid sm:grid-cols-3 gap-4 mt-5">
@@ -147,7 +157,7 @@
         </section>
 
         <!-- Fulfilment -->
-        <section class="sec" id="sec-ff">
+        <section data-tab="terima" class="sec" id="sec-ff">
           <h2 class="sec-h">Cara terima item</h2>
           <p class="sec-d">Pilihan yang dilihat pemenang semasa membuat bayaran. Sekurang-kurangnya satu cara mesti dibuka.</p>
           <div class="mt-5 space-y-5">
@@ -179,9 +189,9 @@
         </section>
 
         <!-- Bayarcash merchant -->
-        <section class="sec" id="sec-merchant">
+        <section data-tab="bayarcash" class="sec" id="sec-merchant">
           <h2 class="sec-h">Akaun Bayarcash (halaman bayaran)</h2>
-          <p class="sec-d">Nama ini dipaparkan pada halaman bayaran Bayarcash untuk yuran RM10 dan bayaran pemenang. Wang masuk ke akaun Bayarcash kita; dalam sistem sebenar, nama ini datang daripada portal Bayarcash dan perlu sepadan.</p>
+          <p class="sec-d">Nama ini dipaparkan pada halaman bayaran Bayarcash untuk yuran RM10 dan bayaran pemenang. Dalam sistem sebenar, butiran ini datang daripada akaun Bayarcash yang menerima bayaran dan mesti sepadan.</p>
           <div class="grid sm:grid-cols-2 gap-4 mt-5">
             <div data-field class="sm:col-span-2"><label class="label" for="s-mn">Nama merchant</label><input id="s-mn" data-m="name" class="input" maxlength="80" autocomplete="organization"></div>
             <div data-field><label class="label" for="s-mr">No. pendaftaran</label><input id="s-mr" data-m="registration" class="input" maxlength="40" placeholder="cth. PPM-003-03-12345678"><p class="hint">Pilihan. No. ROS atau SSM.</p></div>
@@ -196,7 +206,7 @@
         </section>
 
         <!-- Tiers -->
-        <section class="sec">
+        <section data-tab="tier" class="sec">
           <div class="flex items-start gap-3">
             <div><h2 class="sec-h">Tier harga</h2><p class="sec-d">Harga minima dan kenaikan minima bagi setiap kategori item.</p></div>
             <button type="button" id="tier-add" class="btn btn-outline btn-sm ml-auto shrink-0">Tambah tier</button>
@@ -209,7 +219,7 @@
         </section>
 
         <!-- Facebook Pixel -->
-        <section class="sec" id="sec-pixel">
+        <section data-tab="pixel" class="sec" id="sec-pixel">
           <h2 class="sec-h">Facebook Pixel (iklan)</h2>
           <p class="sec-d">Ukur hasil iklan Facebook dan Instagram. Pixel dimuatkan pada halaman pembida sahaja, bukan halaman admin.</p>
           <div class="mt-5 sm:max-w-sm" data-field>
@@ -243,7 +253,7 @@
       </form>
 
       <!-- Live preview -->
-      <aside class="lg:sticky lg:top-4 min-w-0" aria-label="Pratonton kedai">
+      <aside id="set-preview" class="lg:sticky lg:top-24 min-w-0" aria-label="Pratonton kedai">
         <h2 class="font-serif text-[24px] font-normal leading-tight text-ink">Pratonton</h2>
         <p class="text-[14px] text-muted mt-1 mb-4">Begini rupa kedai anda kepada pembida. Dikemas kini semasa anda menaip.</p>
         <div class="elevated overflow-hidden" id="preview"></div>
@@ -507,8 +517,34 @@
       f.querySelectorAll('.field-error[data-auto]').forEach(x => x.remove());
       $('#tier-err').classList.add('hidden');
     }
+    /* ---------- tabs: one settings section at a time ---------- */
+    const TAB_KEYS = ['jenama', 'acara', 'peraturan', 'tier', 'terima', 'bayarcash', 'pixel', 'domain'];
+    const WITH_PREVIEW = ['jenama', 'acara'];
+    function showTab(key, push) {
+      if (!TAB_KEYS.includes(key)) key = 'jenama';
+      document.querySelectorAll('#f [data-tab]').forEach(sec => { sec.hidden = sec.dataset.tab !== key; });
+      document.querySelectorAll('#set-tabs [data-go]').forEach(a => {
+        const on = a.dataset.go === key;
+        a.classList.toggle('is-active', on); a.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      const withPv = WITH_PREVIEW.includes(key);
+      document.getElementById('set-preview').hidden = !withPv;
+      const g = document.getElementById('set-grid');
+      g.classList.toggle('lg:grid-cols-[minmax(0,1fr)_340px]', withPv);
+      g.classList.toggle('max-w-3xl', !withPv);
+      if (push && location.hash !== '#' + key) history.replaceState(null, '', '#' + key);
+    }
+    document.getElementById('set-tabs').addEventListener('click', e => {
+      const a = e.target.closest('[data-go]'); if (!a) return;
+      e.preventDefault(); showTab(a.dataset.go, true);
+      const nav = document.getElementById('set-tabs'); nav.scrollTo({ left: a.offsetLeft - nav.clientWidth / 2 + a.clientWidth / 2, behavior: 'smooth' });
+    });
+    window.addEventListener('hashchange', () => showTab(location.hash.slice(1)));
+    showTab(location.hash.slice(1) || 'jenama');
+
     function showError(el, msg) {
       if (!el) { toast(msg, 'error'); return; }
+      const sec = el.closest('[data-tab]'); if (sec && sec.hidden) showTab(sec.dataset.tab, true);
       el.setAttribute('aria-invalid', 'true');
       if (el.closest('#tiers')) {
         const te = $('#tier-err'); te.textContent = msg; te.classList.remove('hidden');
