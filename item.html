@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>eBid Baju</title>
+  <title>Bidaan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="assets/tw-config.js?v=20261112b"></script>
-  <link rel="stylesheet" href="assets/app.css?v=20261112b">
-  <script src="assets/data.js?v=20261112b"></script>
-  <script src="assets/store.js?v=20261112b"></script>
-  <script src="assets/auction.js?v=20261112b"></script>
-  <script src="assets/ui.js?v=20261112b"></script>
-  <script src="assets/media.js?v=20261112b"></script>
-  <script src="assets/pay.js?v=20261112b"></script>
+  <script src="assets/tw-config.js?v=20261112c"></script>
+  <link rel="stylesheet" href="assets/app.css?v=20261112c">
+  <script src="assets/data.js?v=20261112c"></script>
+  <script src="assets/store.js?v=20261112c"></script>
+  <script src="assets/auction.js?v=20261112c"></script>
+  <script src="assets/ui.js?v=20261112c"></script>
+  <script src="assets/media.js?v=20261112c"></script>
+  <script src="assets/pay.js?v=20261112c"></script>
   <style>
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
@@ -152,6 +152,28 @@
     const tenant = () => EB.tenant.current();
     const loginUrl = () => ui.link('login.html', { next: location.pathname + location.search });
 
+    /* ---------- ad attribution: keep utm_* / fbclid / gclid on internal links and the Bayarcash returnUrl ---------- */
+    const AD_KEYS = /^(utm_[a-z_]+|fbclid|gclid|ttclid|msclkid)$/i;
+    const adParams = () => {
+      const out = {};
+      new URLSearchParams(location.search).forEach((v, k) => { if (AD_KEYS.test(k) && v) out[k] = v; });
+      return out;
+    };
+    const shopUrl = () => ui.link('shop.html', adParams());
+
+    /* ---------- Meta Pixel: each action fires once (re-renders, double taps, back/forward cache) ---------- */
+    const pxFired = new Set();
+    function pxOnce(key, fn) {
+      if (pxFired.has(key)) return;
+      pxFired.add(key);
+      try {
+        const k = 'ebid_px:' + key;
+        if (sessionStorage.getItem(k)) return;
+        sessionStorage.setItem(k, '1');
+      } catch (e) { /* storage blocked: the in-memory guard still holds */ }
+      try { fn(EB.pixel); } catch (e) { console.warn('[pixel]', e); }
+    }
+
     /* ---------- gallery (rendered once; thumbnail clicks swap the slide only) ----------
      * Slides: the lot video first (when item.video is set), then the photos. */
     const PLAY = '<svg viewBox="0 0 24 24" class="h-full w-full" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>';
@@ -268,9 +290,9 @@
       const st = A.status(item, now);
       const lot = ui.lotNo(item);
       setIfChanged('crumb', JSON.stringify([item.category, lot]), () => `
-        <a href="${ui.link('shop.html')}" class="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center hover:text-[var(--ink)] hover:underline">Katalog</a>
+        <a href="${shopUrl()}" class="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center hover:text-[var(--ink)] hover:underline">Katalog</a>
         <span aria-hidden="true">/</span>
-        <a href="${ui.link('shop.html')}#cari" class="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center hover:text-[var(--ink)] hover:underline">${esc(item.category)}</a>
+        <a href="${shopUrl()}#cari" class="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center hover:text-[var(--ink)] hover:underline">${esc(item.category)}</a>
         <span aria-hidden="true">/</span>
         <span class="truncate text-[var(--ink-2)]" aria-current="page">${lot}</span>`);
       setIfChanged('head', JSON.stringify([item.title, item.category, item.size, item.condition, tier.name, fav, st, lot]), () => `
@@ -417,7 +439,7 @@
           <div class="mb-4"><span class="status status-bad">Bidaan anda telah dilepasi</span>
           <p class="mt-1.5 text-[14px] text-[var(--ink-2)]">Bidaan tertinggi anda <span class="num">${money(myTop)}</span>. Bida semula sebelum masa tamat.</p></div>`;
         if (!me) return `
-          <p class="mb-4 text-[14px] text-[var(--ink-2)]"><a class="btn-link" href="${loginUrl()}">Log masuk</a> atau <a class="btn-link" href="${ui.link('login.html', { tab: 'daftar', next: location.pathname + location.search })}">daftar akaun percuma</a> untuk membida.</p>`;
+          <p class="mb-4 text-[14px] text-[var(--ink-2)]">Pembida baharu: tekan Bida, isi nama, telefon dan e-mel. Sudah ada akaun? <a class="btn-link inline-block -my-[14px] py-[14px]" href="${loginUrl()}">Log masuk</a></p>`;
         return '';
       });
 
@@ -445,12 +467,12 @@
         ? `<span class="text-warn">Bidaan minima kini <span class="num">${ui.money(next)}</span>.</span> <button type="button" data-usemin class="btn-link">Guna ${money(next)}</button>`
         : st === 'live' ? `Pilih amaun di atas atau taip sendiri. Anda akan diminta mengesahkan sebelum bidaan dihantar.` : '');
 
-      setIfChanged('feeNote', JSON.stringify([me, paid, t.settings.fee]), () => !me ? '' : paid
+      setIfChanged('feeNote', JSON.stringify([me, paid, t.settings.fee]), () => paid
         ? `<span class="text-ok">Yuran dibayar</span>`
         : `<span class="text-[var(--muted)]">Yuran <span class="num">${ui.money(t.settings.fee)}</span> pada bidaan pertama</span>`);
 
       const btn = $('bidbtn');
-      const btnHtml = st === 'upcoming' ? 'Belum dibuka' : !me ? 'Log masuk untuk membida' : isFinite(val) && val >= next ? `Bida ${money(val)}` : 'Bida sekarang';
+      const btnHtml = st === 'upcoming' ? 'Belum dibuka' : isFinite(val) && val >= next ? `Bida ${money(val)}` : 'Bida sekarang';
       if (btn.getAttribute('data-sig') !== btnHtml) { btn.textContent = btnHtml; btn.setAttribute('data-sig', btnHtml); }
       btn.disabled = disabled || busy;
     }
@@ -618,22 +640,135 @@
     $('bidform').addEventListener('submit', e => {
       e.preventDefault();
       if (busy) return;
-      const me = EB.auth.userId();
-      if (!me) { location.href = loginUrl(); return; }
       const item = getItem();
       const amount = parseFloat($('amt').value);
       if (!isFinite(amount)) { showErr('Sila masukkan amaun bidaan.'); $('amt').focus(); return; }
-      const chk = A.canBid(me, item, amount);
+      if (!EB.auth.userId()) {
+        // ad flow: no trip to login.html; sign up in a bottom sheet, then straight to the fee
+        const min = A.minNextBid(item);
+        if (A.status(item) !== 'live') { showErr('Lelongan tidak dibuka untuk bidaan.'); return; }
+        if (!(amount >= min)) { showErr('low', `Bidaan minima ialah ${money(min)}. <button type="button" data-usemin class="btn-link">Guna ${money(min)}</button>`); $('amt').focus(); return; }
+        if (amount > min * 20) { showErr('Amaun terlalu tinggi. Sila semak semula.'); $('amt').focus(); return; }
+        showErr('');
+        openSignup(amount);
+        return;
+      }
+      proceed(amount);
+    });
+
+    /** Logged in: fee step (first bid) or the confirm step. lift = move a too-low amount up to the minimum. */
+    function proceed(amount, lift) {
+      const me = EB.auth.userId();
+      const item = getItem();
+      let chk = A.canBid(me, item, amount);
+      if (chk.code === 'low' && lift) {
+        amount = A.minNextBid(item);
+        $('amt').value = amount; edited = true;
+        ui.toast(`Bidaan lain masuk sebentar tadi. Amaun anda kini ${money(amount)}.`, 'info');
+        chk = A.canBid(me, item, amount);
+      }
       if (chk.code === 'fee') return openFee(amount);
       if (chk.code === 'low') {
         const min = A.minNextBid(item);
         showErr(chk.reason, `${esc(chk.reason)} <button type="button" data-usemin class="btn-link">Guna ${money(min)}</button>`);
         $('amt').focus(); return;
       }
-      if (!chk.ok) { showErr(chk.reason); $('amt').focus(); return; }
+      if (!chk.ok) { showErr(chk.reason); refresh(); return; }
       showErr('');
       openConfirm(amount);
-    });
+    }
+
+    /* ---------- inline sign-up (bottom sheet on phones): name, phone, e-mail → fee ---------- */
+    const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Malaysian mobile: 01X-XXX XXXX (10 digits) or 011-XXXX XXXX (11 digits); +60 / 60 accepted
+    const phoneDigits = v => { let d = String(v || '').replace(/\D/g, ''); if (/^60(1\d{8,9})$/.test(d)) d = '0' + d.slice(2); return d; };
+    const phoneOk = v => /^01\d{8,9}$/.test(phoneDigits(v));
+    const phoneFmt = v => { const d = phoneDigits(v); return !phoneOk(v) ? String(v || '').trim() : d.length === 10 ? d.slice(0, 3) + '-' + d.slice(3, 6) + ' ' + d.slice(6) : d.slice(0, 3) + '-' + d.slice(3, 7) + ' ' + d.slice(7); };
+
+    function openSignup(amount) {
+      const t = tenant();
+      busy = true; refresh();
+      // "Log masuk" brings them back here with the amount, and the fee step opens by itself
+      const back = new URL(location.href);
+      back.searchParams.set('bid', amount);
+      back.searchParams.set('resume', '1');
+      const loginHref = ui.link('login.html', { next: back.pathname + back.search });
+      const fld = (id, label, attrs) => `
+        <div>
+          <label class="label" for="${id}">${label}</label>
+          <input id="${id}" class="input" ${attrs} aria-describedby="${id}-err">
+          <p class="field-error hidden" id="${id}-err"></p>
+        </div>`;
+      let done = false;
+      ui.modal({
+        title: 'Daftar untuk membida',
+        body: `
+          <p class="text-[15px] text-[var(--ink-2)]">Bidaan anda <span class="num font-medium text-[var(--ink)]">${money(amount)}</span>. Isi 3 maklumat ini, kemudian bayar yuran penyertaan <span class="num">${money(t.settings.fee)}</span>.</p>
+          <div class="mt-4 space-y-4" data-su>
+            ${fld('su-name', 'Nama penuh', 'autocomplete="name" autocapitalize="words" placeholder="Nur Aisyah binti Ahmad"')}
+            ${fld('su-phone', 'No. telefon', 'type="tel" inputmode="tel" autocomplete="tel" placeholder="012-345 6789"')}
+            ${fld('su-email', 'E-mel', 'type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="nama@emel.com"')}
+          </div>
+          <p class="mt-3 text-[15px] text-[var(--ink-2)]">Sudah ada akaun? <a href="${esc(loginHref)}" class="btn-link inline-flex min-h-[44px] items-center">Log masuk</a></p>
+          <p class="meta">Yuran tidak dikembalikan. Bidaan yang disahkan tidak boleh dibatalkan.</p>`,
+        onOpen(wrap) {
+          watchClose(wrap);
+          const go = wrap.querySelector('[data-actions] .btn-brand');
+          wrap.querySelectorAll('[data-su] input').forEach(inp => {
+            inp.addEventListener('input', () => setSuErr(wrap, inp.id, ''));
+            inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go.click(); } });
+          });
+          wrap.querySelector('#su-phone').addEventListener('blur', e => { e.target.value = phoneFmt(e.target.value); });
+          if (matchMedia('(pointer: fine)').matches) wrap.querySelector('#su-name').focus();
+        },
+        actions: [
+          { label: 'Batal' },
+          {
+            label: 'Daftar dan teruskan', primary: true,
+            onClick(close, wrap) {
+              if (done) return false;
+              const v = id => wrap.querySelector('#' + id).value.trim();
+              const name = v('su-name'), phone = v('su-phone'), email = v('su-email').toLowerCase();
+              const errs = {};
+              if (!name) errs['su-name'] = 'Masukkan nama penuh anda.';
+              else if (name.length < 3) errs['su-name'] = 'Nama terlalu pendek. Tulis nama penuh.';
+              if (!phone) errs['su-phone'] = 'Masukkan no. telefon.';
+              else if (!phoneOk(phone)) errs['su-phone'] = 'No. telefon bimbit tidak sah. Contoh: 012-345 6789';
+              if (!email) errs['su-email'] = 'Masukkan e-mel anda.';
+              else if (!EMAIL.test(email)) errs['su-email'] = 'Format e-mel tidak sah. Contoh: nama@emel.com';
+              ['su-name', 'su-phone', 'su-email'].forEach(id => setSuErr(wrap, id, errs[id]));
+              const bad = Object.keys(errs)[0];
+              if (bad) { wrap.querySelector('#' + bad).focus(); return false; }
+              done = true;
+              // demo: an e-mail that already has an account simply logs in as that bidder
+              let user = EB.users.bidders().find(u => String(u.email || '').toLowerCase() === email);
+              const created = !user;
+              if (created) {
+                user = { id: EB.store.uid('u'), role: 'bidder', name, email, phone: phoneFmt(phone), createdAt: Date.now() };
+                EB.store.update(st => {
+                  st.users.push(user);
+                  st.inbox.push({ id: EB.store.uid('msg'), userId: user.id, tenant: EB.tenant.slug(), type: 'info', title: 'Selamat datang ke ' + t.name, body: 'Akaun anda telah berjaya didaftarkan. Selamat membida.', itemId: null, at: Date.now(), read: false });
+                });
+              }
+              EB.auth.login(user.id);
+              if (created) pxOnce('reg:' + user.id, px => px.track('CompleteRegistration', { content_name: 'Daftar pembida' }));
+              ui.toast(created ? 'Akaun didaftarkan. Selamat datang, ' + user.name + '.' : 'E-mel ini sudah berdaftar. Anda log masuk sebagai ' + user.name + '.', 'success');
+              close();
+              proceed(amount, true);
+              return false;
+            },
+          },
+        ],
+      });
+    }
+    function setSuErr(wrap, id, msg) {
+      const el = wrap.querySelector('#' + id + '-err');
+      const inp = wrap.querySelector('#' + id);
+      if (!el || !inp) return;
+      el.textContent = msg || '';
+      el.classList.toggle('hidden', !msg);
+      if (msg) inp.setAttribute('aria-invalid', 'true'); else inp.removeAttribute('aria-invalid');
+    }
 
     // release the form when a modal is dismissed (X, backdrop, Esc) — unless a newer modal took over
     let modalSeq = 0;
@@ -698,11 +833,14 @@
               wrap.querySelectorAll('[data-actions] button:not(.btn-brand), [data-x], input').forEach(b => { b.disabled = true; });
               setTimeout(() => {
                 if (!wrap.isConnected) return; // dismissed
-                EB.pay.start({
+                const intent = EB.pay.start({
                   kind: 'fee', tenant: t.slug, itemId: item.id, amount: fee,
                   description: 'Yuran penyertaan ' + ui.lotNo(item), channel,
-                  returnUrl: ui.link('item.html', { id: item.id, bid: amount }),
+                  returnUrl: ui.link('item.html', Object.assign(adParams(), { id: item.id, bid: amount })),
+                  navigate: false,
                 });
+                pxOnce('fee-start:' + intent.id, px => px.track('InitiateCheckout', { value: fee, content_name: 'Yuran penyertaan', content_ids: [item.id], num_items: 1 }));
+                location.href = EB.pay.pageUrl('bayarcash.html', intent);
               }, 450);
               return false;
             },
@@ -733,6 +871,11 @@
       // keep the amount the user picked in the form, so a retry is one tap
       if (isFinite(wanted) && A.status(item) === 'live') { $('amt').value = wanted; edited = true; }
       if (r.status === 'success') {
+        const fee = Number(it.amount) || tenant().settings.fee;
+        pxOnce('fee-paid:' + it.id, px => {
+          px.custom('FeePaid', { value: fee, content_ids: [itemId] });
+          px.track('Purchase', { value: fee, content_name: 'Yuran penyertaan', content_ids: [itemId], content_type: 'product', num_items: 1 });
+        });
         ui.toast(`Yuran diterima (Ruj: ${it.ref || '-'}).`, 'success');
         if (!me) return;
         const min = A.minNextBid(item);
@@ -782,6 +925,7 @@
               const res = A.placeBid(EB.auth.userId(), itemId, amount);
               busy = false;
               if (res && res.ok) {
+                pxOnce('bid:' + (res.bid ? res.bid.id : itemId + ':' + amount), px => px.custom('PlaceBid', { value: amount, content_ids: [itemId] }));
                 edited = false;
                 showErr('');
                 ui.toast(`Bidaan ${ui.money(amount)} diterima. Anda pembida tertinggi.`, 'success');
@@ -800,7 +944,26 @@
     renderGallery(first);
     refresh();
     EB.store.subscribe(refresh);
+    // ViewContent: once per page load (a back/forward-cache restore does not run this again)
+    if (!window.__ebViewSent && EB.pixel) {
+      window.__ebViewSent = true;
+      const top = A.highest(itemId);
+      EB.pixel.track('ViewContent', { content_ids: [itemId], content_name: first.title, content_type: 'product', value: top ? top.amount : first.startPrice });
+    }
     handleReturn();
+    // back from "Sudah ada akaun? Log masuk" (?bid=&resume=1): keep the amount and open the next step
+    (function resume() {
+      if (ui.qs('resume') !== '1' || ui.qs('pay_intent')) return;
+      const wanted = parseFloat(ui.qs('bid'));
+      try {
+        const u = new URL(location.href);
+        u.searchParams.delete('bid'); u.searchParams.delete('resume');
+        history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+      } catch (e) { /* ignore */ }
+      if (!isFinite(wanted) || A.status(getItem()) !== 'live') return;
+      $('amt').value = wanted; edited = true; refresh();
+      if (EB.auth.userId()) proceed(wanted, true);
+    })();
     setInterval(() => {
       refresh(); // status changes (upcoming → live → ended, last 30 min) happen without a store write
       document.querySelectorAll('[data-ago]').forEach(el => { el.textContent = ui.timeAgo(Number(el.getAttribute('data-ago'))); });

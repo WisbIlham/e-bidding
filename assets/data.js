@@ -3,7 +3,7 @@
  * startMin < 0 = already started. endMin < 0 = already ended.
  */
 window.EB_DATA = {
-  version: 9,
+  version: 10,
 
   platform: {
     name: 'eBid Baju',
@@ -24,6 +24,10 @@ window.EB_DATA = {
       event: 'Majlis Makan Malam Kutipan Dana PRU Ke-16 PAS Kawasan Kota Bharu',
       beneficiary: 'Hasil bidaan akan disalurkan kepada dana pilihan raya PAS Kawasan Kota Bharu.',
       slogan: 'Bersama Menyumbang, Bersama Memperjuangkan Islam',
+      // Name shown on the Bayarcash payment page (a portal under our Bayarcash account). Edit in Admin > Tetapan.
+      merchant: { name: 'PAS Kawasan Kota Bharu', registration: '', email: '', phone: '' },
+      // Facebook / Meta Pixel. Edit in Admin > Tetapan. Empty id = no pixel.
+      pixel: { id: '', sendPurchase: false },
       colors: { brand: '#0b6b3a', brand2: '#053d22', accent: '#e0b43c', ink: '#ffffff' },
       settings: {
         fee: 10, lastWindowMin: 30, lastWindowMultiplier: 2, lastWindowOn: true,

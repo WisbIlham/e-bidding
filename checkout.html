@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Pembayaran · eBid Baju</title>
+  <title>Pembayaran</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="assets/tw-config.js?v=20261112b"></script>
-  <link rel="stylesheet" href="assets/app.css?v=20261112b">
-  <script src="assets/data.js?v=20261112b"></script>
-  <script src="assets/store.js?v=20261112b"></script>
-  <script src="assets/auction.js?v=20261112b"></script>
-  <script src="assets/ui.js?v=20261112b"></script>
-  <script src="assets/pay.js?v=20261112b"></script>
+  <script src="assets/tw-config.js?v=20261112c"></script>
+  <link rel="stylesheet" href="assets/app.css?v=20261112c">
+  <script src="assets/data.js?v=20261112c"></script>
+  <script src="assets/store.js?v=20261112c"></script>
+  <script src="assets/auction.js?v=20261112c"></script>
+  <script src="assets/ui.js?v=20261112c"></script>
+  <script src="assets/pay.js?v=20261112c"></script>
   <style>
     /* large tappable choice rows on grey tiles; the chosen row turns white with a 2px ink ring */
     .pm { background: var(--tile); border-radius: 12px; min-height: 64px; transition: background-color .12s, box-shadow .12s; }
@@ -61,6 +61,27 @@
     ];
 
     const isDonation = t => !!(t && (t.beneficiary || t.event));
+
+    /* ---------- ad attribution: keep utm_* / fbclid on the Bayarcash returnUrl ---------- */
+    const AD_KEYS = /^(utm_[a-z_]+|fbclid|gclid|ttclid|msclkid)$/i;
+    const adParams = () => {
+      const out = {};
+      new URLSearchParams(location.search).forEach((v, k) => { if (AD_KEYS.test(k) && v) out[k] = v; });
+      return out;
+    };
+
+    /* ---------- Meta Pixel: each action fires once (re-renders, double taps, back/forward cache) ---------- */
+    const pxFired = new Set();
+    function pxOnce(key, fn) {
+      if (pxFired.has(key)) return;
+      pxFired.add(key);
+      try {
+        const k = 'ebid_px:' + key;
+        if (sessionStorage.getItem(k)) return;
+        sessionStorage.setItem(k, '1');
+      } catch (e) { /* storage blocked: the in-memory guard still holds */ }
+      try { if (EB.pixel) fn(EB.pixel); } catch (e) { console.warn('[pixel]', e); }
+    }
 
     /** How the winner can receive the item. null = shop has no setting (post only, as before). */
     function fulfilOf(t) {
@@ -134,6 +155,7 @@
         draft.clear();
         receipt = orderId;
         receiptIntent = it;
+        pxOnce('order-paid:' + it.id, px => px.track('Purchase', { value: Number(it.amount) || 0, content_name: 'Bayaran pemenang', content_ids: it.itemId ? [it.itemId] : undefined, content_type: 'product', num_items: 1 }));
         U.toast('Pembayaran berjaya. Rujukan ' + it.ref + '.', 'success');
       } else if (back.status === 'failed') {
         notice = { kind: 'failed', intent: it };
@@ -488,15 +510,18 @@
         notice = null;
         f.querySelectorAll('[data-pay]').forEach(b => { b.disabled = true; b.setAttribute('aria-busy', 'true'); b.textContent = 'Membuka Bayarcash…'; });
         setTimeout(() => {
-          EB.pay.start({
+          const intent = EB.pay.start({
             kind: 'order', tenant: t.slug, itemId: item.id, orderId: o.id,
             amount: total,
             description: 'Invois ' + o.id,
             channel: method(),
             customer: { name: recipient.name, phone: recipient.phone, email: (EB.auth.user() || {}).email || '' },
             meta: { address, fulfilment, shipping, shipZone, shipState: negeri, recipient },
-            returnUrl: U.link('checkout.html', { order: o.id }),
+            returnUrl: U.link('checkout.html', Object.assign(adParams(), { order: o.id })),
+            navigate: false,
           });
+          pxOnce('order-start:' + intent.id, px => px.track('InitiateCheckout', { value: total, content_name: 'Bayaran pemenang', content_ids: [item.id], num_items: 1 }));
+          location.href = EB.pay.pageUrl('bayarcash.html', intent);
         }, 450);
       });
     }

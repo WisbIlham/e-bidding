@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eBid Baju · Lelongan dalam talian untuk kedai pakaian dan acara kutipan derma</title>
+  <meta name="description" content="Platform lelongan white-label untuk butik, penjual preloved dan acara kutipan derma. Peraturan diadaptasi daripada JPJeBid, bayaran melalui Bayarcash.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script src="assets/tw-config.js?v=20261112c"></script>
+  <link rel="stylesheet" href="assets/app.css?v=20261112c">
+  <script src="assets/data.js?v=20261112c"></script>
+  <script src="assets/store.js?v=20261112c"></script>
+  <script src="assets/auction.js?v=20261112c"></script>
+  <script src="assets/ui.js?v=20261112c"></script>
+  <style>
+    /* Platform page (not a tenant): monochrome only. Ink, white and tile grey; no accent colour.
+       Tenant colours appear only in each demo shop's logo mark. See DESIGN.md "Monokrom Premium". */
+    :root { --brand: var(--ink); --brand-2: var(--ink); --brand-ink: #fff; --accent: var(--tile); }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body { overflow-x: hidden; }
+    section[id] { scroll-margin-top: 64px; }
+
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+    @media (min-width: 768px) { .wrap { padding: 0 32px; } }
+    @media (min-width: 1024px) { .wrap { padding: 0 48px; } }
+
+    /* ---------- type ---------- */
+    .wordmark { font-family: var(--font-display); font-weight: 500; font-size: 22px; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; line-height: 1; }
+    .h2 { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.08; letter-spacing: -.015em; color: var(--ink); }
+    .h3 { font-family: var(--font-display); font-weight: 400; font-size: 23px; line-height: 1.2; color: var(--ink); }
+    .h4 { font-size: 17px; font-weight: 500; line-height: 1.35; color: var(--ink); }
+    .lede { font-size: 17px; line-height: 1.55; color: var(--ink-2); max-width: 46ch; }
+    @media (min-width: 768px) { .h2 { font-size: 46px; } .h3 { font-size: 26px; } .lede { font-size: 18px; } }
+    @media (min-width: 1024px) { .h2 { font-size: 54px; } .lede { max-width: 54ch; } }
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    /* ---------- sections: whitespace does the separating ---------- */
+    .sec { padding: 56px 0; }
+    .sec + .sec { border-top: 1px solid var(--line); }
+    .sec-head { margin-bottom: 36px; }
+    @media (min-width: 768px) { .sec { padding: 96px 0; } .sec-head { margin-bottom: 56px; } }
+
+    /* ---------- header ---------- */
+    .top-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: var(--ink); border-bottom: 1px solid transparent; }
+    .top-link:hover { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1px; }
+    .icon-btn { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-right: -10px; color: var(--ink); border-radius: 8px; }
+    .icon-btn:hover { background: var(--tile); }
+    .icon-btn .i-close, .icon-btn[aria-expanded="true"] .i-open { display: none; }
+    .icon-btn[aria-expanded="true"] .i-close { display: block; }
+    #mnav a { display: flex; align-items: center; justify-content: space-between; min-height: 56px; font-size: 18px; color: var(--ink); }
+    #mnav a::after { content: "→"; color: var(--muted); }
+
+    /* ---------- hero: full-bleed photograph, copy bottom-left ---------- */
+    .hero { height: 70vh; height: 70svh; min-height: 520px; max-height: 760px; background: var(--ink); }
+    .hero-img { position: absolute; inset: 0; object-position: 50% 0;
+      /* the source portrait has a gold banner corner at the top-left; let it fall into the black */
+      -webkit-mask-image: radial-gradient(ellipse 62% 17% at 0 0, transparent 55%, #000 100%), linear-gradient(to bottom, transparent, #000 8%);
+      -webkit-mask-composite: source-in;
+              mask-image: radial-gradient(ellipse 62% 17% at 0 0, transparent 55%, #000 100%), linear-gradient(to bottom, transparent, #000 8%);
+              mask-composite: intersect; }
+    @media (max-width: 767px) {
+      .hero.hero-photo::after { background: linear-gradient(to top, rgba(1,2,5,.86), rgba(1,2,5,.6) 42%, rgba(1,2,5,0) 72%); }
+    }
+    /* The source portrait is 330x560. On wider screens it sits at its own proportion against black
+       (sharp, like a studio shot) instead of being stretched 4x across the band. */
+    @media (min-width: 768px) {
+      .hero { height: 75vh; height: 75svh; min-height: 560px; max-height: 860px; }
+      .hero-photo img.hero-img { left: auto; right: max(0px, calc((100vw - 1200px) / 2)); width: auto; height: 100%; aspect-ratio: 330 / 560;
+        -webkit-mask-image: linear-gradient(to right, transparent, #000 24%, #000 80%, transparent), linear-gradient(to bottom, transparent, #000 14%);
+        -webkit-mask-composite: source-in;
+                mask-image: linear-gradient(to right, transparent, #000 24%, #000 80%, transparent), linear-gradient(to bottom, transparent, #000 14%);
+                mask-composite: intersect; }
+    }
+    .hero h1 { font-family: var(--font-display); font-weight: 400; color: #fff; font-size: 36px; line-height: 1.04; letter-spacing: -.02em; }
+    @media (min-width: 640px) { .hero h1 { font-size: 50px; max-width: 14ch; } }
+    @media (min-width: 768px) { .hero h1 { max-width: 16ch; } }
+    @media (min-width: 1024px) { .hero h1 { font-size: 68px; max-width: 18ch; } }
+    .hero-sub { color: rgba(255,255,255,.88); font-size: 16px; line-height: 1.5; max-width: 44ch; }
+    @media (min-width: 640px) { .hero-sub { font-size: 18px; } }
+    .btn-white { background: #fff; color: var(--ink); }
+    .btn-white:hover { background: #e2e3e6; }
+    .btn-outline-white { background: transparent; color: #fff; border: 2px solid #fff; }
+    .btn-outline-white:hover { background: rgba(255,255,255,.12); }
+    .hero :focus-visible, .foot :focus-visible { outline-color: #fff; }
+
+    /* ---------- live lot: spec strip under the hero ---------- */
+    .spec { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .spec > div { min-width: 0; }
+    .spec dt { font-size: 14px; color: var(--muted); }
+    .spec dd { font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; letter-spacing: -.01em; }
+    .spec .s-note { display: block; font-size: 13px; letter-spacing: 0; line-height: 1.4; color: var(--muted); margin-top: 2px; }
+    /* phones: one big number, then a spec list */
+    .spec > div { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 16px; padding: 14px 0; }
+    .spec > div + div { border-top: 1px solid var(--line); }
+    .spec dd { font-size: 21px; line-height: 1.2; text-align: right; }
+    .spec > .s-price { display: block; padding: 20px 0 18px; }
+    .spec > .s-price dd { font-size: 42px; line-height: 1.05; margin-top: 4px; letter-spacing: -.02em; text-align: left; }
+    @media (min-width: 768px) {
+      .spec { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .spec > div, .spec > .s-price { display: block; padding: 24px 24px 24px 0; }
+      .spec > div + div { border-top: 0; }
+      .spec > div:nth-child(even) { border-left: 1px solid var(--line); padding-left: 24px; }
+      .spec > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+      .spec dd, .spec > .s-price dd { font-size: 34px; line-height: 1.1; margin-top: 6px; }
+      .spec dd { text-align: left; }
+      .spec .s-note { margin-top: 6px; }
+    }
+    @media (min-width: 1024px) {
+      .spec { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.35fr) minmax(0, .6fr) minmax(0, 1.2fr); }
+      .spec > div, .spec > .s-price, .spec > div:nth-child(even) { padding: 28px 24px; }
+      .spec > div:nth-child(n+3) { border-top: 0; }
+      .spec > div + div { border-left: 1px solid var(--line); }
+      .spec > div:first-child { padding-left: 0; }
+      .spec dd, .spec > .s-price dd { font-size: 31px; }
+    }
+    @media (min-width: 1200px) { .spec dd, .spec > .s-price dd { font-size: 38px; } }
+
+    /* ---------- three text columns ---------- */
+    .cols3 > div { padding: 24px 0; border-top: 1px solid var(--line); }
+    @media (min-width: 768px) {
+      .cols3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 40px; }
+      .cols3 > div { padding: 28px 0 0; border-top: 1px solid var(--ink); }
+    }
+
+    /* ---------- rules table: real table on wide screens, stacked rows on phones ---------- */
+    .rules { font-size: 16px; }
+    .rules th { padding-left: 0; }
+    .rules td { vertical-align: top; color: var(--ink-2); padding: 1.1rem 1.25rem 1.1rem 0; }
+    .rules td:first-child { font-weight: 500; color: var(--ink); width: 26%; }
+    .rules th + th, .rules td + td { padding-left: 1.25rem; }
+    .rules tbody tr:first-child td { border-top: 1px solid var(--ink); }
+    .rules thead th { border-bottom: 0; }
+    @media (max-width: 639px) {
+      .rules thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .rules tr { display: block; padding: 1.1rem 0; border-top: 1px solid var(--line); }
+      .rules tbody tr:first-child { border-top-color: var(--ink); }
+      .rules tbody tr:first-child td { border-top: 0; }
+      .rules td, .rules td + td { display: block; width: auto !important; border: 0; padding: .15rem 0; }
+      .rules td:first-child { font-size: 17px; }
+      .rules td[data-label]::before { content: attr(data-label); display: block; margin-top: .6rem; font-size: 14px; color: var(--muted); }
+    }
+    .tiers { font-variant-numeric: tabular-nums; }
+    .tiers th:first-child, .tiers td:first-child { padding-left: 0; }
+    .tiers th:last-child, .tiers td:last-child { padding-right: 0; }
+    @media (max-width: 639px) {
+      .tiers th, .tiers td { padding-left: .4rem; padding-right: .4rem; font-size: 14px; }
+      .tiers td { white-space: nowrap; }
+      .tiers th { white-space: normal; vertical-align: bottom; font-size: 13px; }
+    }
+
+    /* ---------- steps ---------- */
+    .steps li { display: grid; grid-template-columns: 2.5rem 1fr; column-gap: .5rem; padding: 18px 0; border-top: 1px solid var(--line); }
+    .steps li:first-child { border-top-color: var(--ink); }
+
+    /* ---------- demo shops ---------- */
+    .shop-row .logo-mark { background: var(--t-brand); color: var(--t-ink); }
+
+    /* ---------- pricing: three grey tiles, rows line up across tiles ---------- */
+    .plans { display: grid; gap: 12px; }
+    .plan { background: var(--tile); border-radius: 12px; padding: 24px 20px; display: flex; flex-direction: column; }
+    .plan-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 15px; }
+    .plan-row dt { color: var(--muted); }
+    .plan-row dd { color: var(--ink); }
+    .plan-cta { padding-top: 20px; }
+    @media (min-width: 768px) {
+      .plans { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 16px; row-gap: 0; }
+      .plan { display: grid; grid-row: span 11; grid-template-rows: subgrid; padding: 28px 24px; }
+      .plan-row { grid-template-columns: 1fr; gap: 2px; padding: 12px 0; }
+      .plan-cta { align-self: end; padding-top: 24px; }
+    }
+
+    /* ---------- FAQ: hairline accordion ---------- */
+    details.faq { border-top: 1px solid var(--line); }
+    details.faq:first-child { border-top-color: var(--ink); }
+    details.faq:last-child { border-bottom: 1px solid var(--line); }
+    details.faq > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      min-height: 64px; padding: 16px 0; font-size: 18px; line-height: 1.35; color: var(--ink); }
+    details.faq > summary::-webkit-details-marker { display: none; }
+    details.faq > summary:hover span { text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
+    details.faq > summary svg { flex: none; transition: transform .15s; }
+    details.faq[open] > summary svg { transform: rotate(45deg); }
+    @media (min-width: 768px) { details.faq > summary { font-size: 20px; min-height: 72px; } }
+    @media (prefers-reduced-motion: reduce) { details.faq > summary svg { transition: none; } }
+
+    /* ---------- footer: near-black band ---------- */
+    .foot { background: var(--ink); color: #fff; }
+    .foot .wordmark { color: #fff; }
+    .foot-h { font-size: 14px; color: rgba(255,255,255,.55); }
+    .foot a.fl { display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; color: rgba(255,255,255,.82); }
+    .foot a.fl:hover { color: #fff; text-decoration: underline; text-underline-offset: 5px; }
+    .foot-line { border-color: rgba(255,255,255,.16); }
+
+    /* larger tap targets than the shared .btn-sm on phones */
+    @media (max-width: 767px) { .btn-sm { min-height: 44px; } }
+    .link-arrow { min-height: 44px; }
+  </style>
+</head>
+<body id="top">
+  <a href="#kandungan" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-[var(--surface)] focus:px-3 focus:py-2 focus:text-sm">Langkau ke kandungan</a>
+
+  <header class="site-header">
+    <div class="wrap flex h-16 items-center gap-8">
+      <a href="#top" class="wordmark inline-flex min-h-[44px] items-center" aria-label="eBid Baju, ke atas halaman">eBid Baju</a>
+      <nav class="hidden items-center gap-7 lg:flex" aria-label="Utama">
+        <a class="top-link" href="#cara">Cara ia berfungsi</a>
+        <a class="top-link" href="#peraturan">Peraturan</a>
+        <a class="top-link" href="#harga">Harga</a>
+        <a class="top-link" href="#soalan">Soalan lazim</a>
+      </nav>
+      <div class="ml-auto flex items-center gap-3 sm:gap-6">
+        <a class="top-link hidden sm:inline-flex" href="login.html">Log masuk admin</a>
+        <a class="btn btn-brand !min-h-[44px]" href="shop.html">Cuba demo</a>
+        <button id="menuBtn" type="button" class="icon-btn lg:hidden" aria-expanded="false" aria-controls="mnav" aria-label="Menu">
+          <svg class="i-open" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 7.5h16M3 14.5h16"/></svg>
+          <svg class="i-close" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
+        </button>
+      </div>
+    </div>
+    <nav id="mnav" class="hidden border-t border-line lg:hidden" aria-label="Utama (mudah alih)">
+      <ul class="wrap divide-line pb-3">
+        <li><a href="#cara">Cara ia berfungsi</a></li>
+        <li><a href="#peraturan">Peraturan</a></li>
+        <li><a href="#harga">Harga</a></li>
+        <li><a href="#soalan">Soalan lazim</a></li>
+        <li class="sm:hidden"><a href="login.html">Log masuk admin</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="kandungan">
+    <!-- Hero: full-bleed photograph, headline bottom-left -->
+    <section class="hero hero-photo" aria-labelledby="heroTitle">
+      <img class="hero-img" src="assets/img/nikaziz-photo.jpg" alt="Tuan Guru Nik Abdul Aziz memakai rompi celoreng hijau yang dilelong dalam kedai demo" fetchpriority="high">
+      <div class="hero-copy">
+        <div class="wrap pb-7 md:pb-14">
+          <h1 id="heroTitle">Lelongan dalam talian, dengan jenama anda sendiri.</h1>
+          <p class="hero-sub mt-4">Untuk butik, penjual preloved dan acara kutipan derma. Logo, warna dan domain anda; bayaran melalui Bayarcash (FPX, DuitNow dan kad).</p>
+          <div class="mt-7 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+            <a class="btn btn-white btn-lg !px-3 sm:!px-7" href="item.html?shop=paskb&id=pas1">Bida sekarang</a>
+            <a class="btn btn-outline-white btn-lg !px-3 sm:!px-7" href="#peraturan">Baca peraturan</a>
+          </div>
+          <p class="mt-6 text-[13px] text-white/70 md:mt-8">Demo: Bidaan Istimewa PAS Kawasan Kota Bharu</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live lot from the demo shop -->
+    <section aria-label="Lot langsung dalam kedai demo" class="wrap">
+      <div id="heroLot" aria-live="off"></div>
+      <p class="meta py-4">Data langsung daripada kedai demo dalam pelayar anda. Pembida lain dalam demo ialah bot.</p>
+    </section>
+
+    <!-- Untuk siapa -->
+    <section id="untuk" class="sec">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="h2">Untuk siapa</h2>
+          <p class="lede mt-4">Sesiapa yang menjual pakaian atau barang kenangan yang nilainya lebih baik ditentukan oleh pembeli.</p>
+        </div>
+        <div class="cols3">
+          <div>
+            <h3 class="h3">Butik dan jenama fesyen</h3>
+            <p class="mt-3 text-ink-2">Lelong koleksi edisi terhad, sampel dan stok terakhir. Harga ditentukan oleh permintaan, bukan oleh diskaun.</p>
+          </div>
+          <div>
+            <h3 class="h3">Penjual preloved dan vintage</h3>
+            <p class="mt-3 text-ink-2">Untuk barang satu-satunya: tee band lama, jaket varsity, kebaya koleksi. Had menang setiap pembida menghalang seorang pembeli memborong semuanya.</p>
+          </div>
+          <div>
+            <h3 class="h3">Pertubuhan dan acara kutipan derma</h3>
+            <p class="mt-3 text-ink-2">Lelong barang kenangan semasa majlis makan malam atau kempen. Laman kedai memaparkan nama acara dan penerima manfaat, dan tetamu yang tidak hadir boleh membida dari telefon.</p>
+            <a class="link-arrow mt-2" href="shop.html?shop=paskb">Dalam demo: PAS Kawasan Kota Bharu</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Peraturan -->
+    <section id="peraturan" class="sec">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="h2">Peraturan lelongan</h2>
+          <p class="lede mt-4">Diadaptasi daripada JPJeBid, sistem bidaan nombor pendaftaran kenderaan JPJ. Setiap kedai menetapkan nilainya sendiri; bentuk peraturannya sama untuk semua kedai.</p>
+        </div>
+        <table class="table rules">
+          <thead><tr><th scope="col">Peraturan</th><th scope="col">Maksudnya</th><th scope="col">Kenapa</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Harga mula dan kenaikan ikut tier</td>
+              <td data-label="Maksudnya">Setiap item diletakkan dalam satu tier. Tier menetapkan bidaan pertama yang dibenarkan dan kenaikan minima bagi setiap bidaan berikutnya.</td>
+              <td data-label="Kenapa">Pembida tahu harga lantai sebelum masuk, dan tiada bidaan RM1 yang melambatkan lelongan.</td>
+            </tr>
+            <tr>
+              <td>Kenaikan &times;2 dalam 30 minit terakhir</td>
+              <td data-label="Maksudnya">Apabila lelongan tinggal kurang 30 minit, kenaikan minima menjadi dua kali ganda. Kedai boleh ubah tempoh ini atau mematikannya.</td>
+              <td data-label="Kenapa">Mengurangkan bidaan curi pada saat akhir. Pembida yang serius membida lebih awal.</td>
+            </tr>
+            <tr>
+              <td>Yuran penyertaan RM10</td>
+              <td data-label="Maksudnya">Dibayar sekali bagi setiap item, sebelum bidaan pertama pada item itu. Selepas itu pembida boleh membida berulang kali. Yuran tidak dikembalikan.</td>
+              <td data-label="Kenapa">Menapis pembida yang tidak serius dan menampung kos menjalankan lelongan.</td>
+            </tr>
+            <tr>
+              <td>Tiada pembatalan bidaan</td>
+              <td data-label="Maksudnya">Setiap bidaan muktamad sebaik dihantar. Amaun lebih 20 kali bidaan minima ditolak sebagai salah taip.</td>
+              <td data-label="Kenapa">Harga tertinggi yang dipaparkan sentiasa sah, jadi pembida lain dan kedai boleh bergantung padanya.</td>
+            </tr>
+            <tr>
+              <td>Had menang setiap pembida</td>
+              <td data-label="Maksudnya">Seorang pembida hanya boleh mendahului atau memenangi beberapa item serentak dalam satu kedai. Contoh dalam demo: PAS Kawasan Kota Bharu menetapkan 1 item bagi setiap pembida.</td>
+              <td data-label="Kenapa">Lebih ramai pembeli mendapat peluang, dan kedai kurang berisiko dengan pemenang yang tidak membayar.</td>
+            </tr>
+            <tr>
+              <td>Peti masuk</td>
+              <td data-label="Maksudnya">Mesej dalam akaun apabila bidaan dilepasi, lelongan hampir tamat, menang, kalah dan bayaran diterima.</td>
+              <td data-label="Kenapa">Pembida tidak perlu memantau skrin, dan setiap langkah ada rekodnya.</td>
+            </tr>
+            <tr>
+              <td>Bayar dalam tempoh, atau item berpindah</td>
+              <td data-label="Maksudnya">Pemenang perlu membayar dalam tempoh yang kedai tetapkan (contoh 24 jam). Jika tidak, item ditawarkan kepada pembida tertinggi kedua pada harga bidaannya.</td>
+              <td data-label="Kenapa">Kedai tidak terikat dengan pemenang yang menghilang selepas lelongan tamat.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="mt-6 max-w-[70ch] border-t border-line pt-6 text-ink-2"><span class="font-medium text-ink">Satu perbezaan daripada JPJeBid:</span> lelongan di sini terbuka. Semua pembida nampak bidaan tertinggi dan sejarah bidaan secara langsung, dengan nama pembida ditapis (contoh <span class="tnum">Fa***88</span>).</p>
+
+        <div class="mt-16 max-w-[760px] md:mt-24">
+          <h3 class="h3">Contoh tier: PAS Kawasan Kota Bharu</h3>
+          <p class="meta mt-2">Nilai daripada kedai demo. Setiap kedai menetapkan tier sendiri.</p>
+          <div class="mt-5 overflow-x-auto">
+            <table class="table tiers" id="tierTable"></table>
+          </div>
+          <p id="tierExample" class="mt-5 text-ink-2"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cara ia berfungsi -->
+    <section id="cara" class="sec">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="h2">Cara ia berfungsi</h2>
+          <p class="lede mt-4">Kedai menyediakan item dan peraturan. Pembida mendaftar, membayar yuran, dan membida sehingga masa tamat.</p>
+        </div>
+        <div class="grid gap-12 md:grid-cols-2 md:gap-10">
+          <div>
+            <h3 class="h3">Penjual</h3>
+            <ol class="steps mt-5" id="stepsSeller"></ol>
+          </div>
+          <div>
+            <h3 class="h3">Pembida</h3>
+            <ol class="steps mt-5" id="stepsBidder"></ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kedai demo -->
+
+
+    <!-- Harga -->
+    <section id="harga" class="sec">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="h2">Harga</h2>
+          <p class="lede mt-4">Langganan bulanan bagi setiap kedai, ditambah bahagian kecil daripada yuran penyertaan. Tiada komisen atas harga jualan item.</p>
+        </div>
+        <div id="plans" class="plans"></div>
+
+        <div class="mt-16 grid gap-12 md:mt-24 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <h3 class="h3">Ke mana wang pergi</h3>
+            <div class="mt-5 border-t border-ink">
+              <div class="border-b border-line py-5">
+                <p class="h4">Yuran penyertaan RM10</p>
+                <p class="mt-1.5 text-ink-2">Dibayar oleh pembida melalui Bayarcash ke akaun platform eBid Baju. Bahagian kedai (contoh 90%) diselesaikan kepada kedai; platform menyimpan bakinya sebagai yuran perkhidmatan.</p>
+              </div>
+              <div class="py-5">
+                <p class="h4">Bayaran pemenang</p>
+                <p class="mt-1.5 text-ink-2">Dibayar terus ke akaun Bayarcash milik kedai sendiri. eBid Baju tidak memegang wang jualan dan tidak mengambil komisen atas harga menang.</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 class="h3">Contoh</h3>
+            <p class="meta mt-1">Satu acara dengan 200 penyertaan</p>
+            <table class="table mt-4 border-t border-ink">
+              <caption class="sr-only">Contoh pembahagian yuran penyertaan dan wang jualan</caption>
+              <tbody class="tnum">
+                <tr><td class="!pl-0 text-ink-2">200 penyertaan &times; RM 10.00</td><td class="num !pr-0">RM 2,000.00</td></tr>
+                <tr><td class="!pl-0 text-ink-2">Bahagian platform (10%)</td><td class="num !pr-0">RM 200.00</td></tr>
+                <tr><td class="!pl-0 font-medium text-ink">Bahagian kedai (90%)</td><td class="num !pr-0 font-medium">RM 1,800.00</td></tr>
+                <tr><td class="!pl-0 text-ink-2" id="saleLabel">Wang jualan item</td><td class="num !pr-0" id="saleValue">100% ke akaun kedai</td></tr>
+              </tbody>
+            </table>
+            <p class="meta mt-4">Angka di atas hanya contoh. Kadar sebenar ditetapkan dalam perjanjian dengan kedai. Caj transaksi Bayarcash dikenakan mengikut akaun masing-masing.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Soalan lazim -->
+    <section id="soalan" class="sec">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="h2">Soalan lazim</h2>
+          <p class="lede mt-4">Soalan yang biasa ditanya oleh pemilik kedai dan jawatankuasa acara.</p>
+        </div>
+        <div id="faq" class="max-w-[880px]"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap grid grid-cols-1 gap-10 py-14 sm:grid-cols-2 md:py-20 lg:grid-cols-12">
+      <div class="sm:col-span-2 lg:col-span-6">
+        <a href="#top" class="wordmark inline-flex min-h-[44px] items-center">eBid Baju</a>
+        <p class="mt-2 max-w-[40ch] text-white/70">Platform lelongan white-label untuk kedai pakaian dan acara kutipan derma. Bayaran melalui Bayarcash.</p>
+      </div>
+      <div class="lg:col-span-3">
+        <h2 class="foot-h">Kedai demo</h2>
+        <ul id="footShops" class="mt-2"></ul>
+      </div>
+      <div class="lg:col-span-3">
+        <h2 class="foot-h">Panel</h2>
+        <ul class="mt-2">
+          <li><a class="fl" href="login.html">Log masuk</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-line border-t">
+      <div class="wrap flex flex-col gap-1 py-5 text-[14px] text-white/60 sm:flex-row sm:items-center sm:gap-6">
+        <span>&copy; 2026 eBid Baju</span>
+        <span class="sm:ml-auto">Demo sahaja: tiada transaksi sebenar.</span>
+        <button id="resetDemo" type="button" class="min-h-[44px] self-start underline underline-offset-4 hover:text-white sm:self-auto">Set semula data demo</button>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    EB.init({ area: 'platform', engine: true });
+    const U = EB.ui, A = EB.auction, esc = U.esc;
+    const $ = id => document.getElementById(id);
+
+    /* ---------- mobile menu ---------- */
+    const menuBtn = $('menuBtn'), mnav = $('mnav');
+    menuBtn.onclick = () => {
+      const open = mnav.classList.toggle('hidden') === false;
+      menuBtn.setAttribute('aria-expanded', String(open));
+    };
+    mnav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      mnav.classList.add('hidden'); menuBtn.setAttribute('aria-expanded', 'false');
+    }));
+
+    /* ---------- static content ---------- */
+    const STEPS_SELLER = [
+      ['Daftar dan pilih pelan', 'Kami sediakan subdomain anda, atau sambungkan domain sendiri untuk pelan Pro.'],
+      ['Tetapkan jenama dan peraturan', 'Logo, warna, tier harga, had menang dan tempoh bayaran. Sambungkan akaun Bayarcash kedai.'],
+      ['Senaraikan item', 'Gambar, saiz, keadaan, tier, serta masa mula dan tamat lelongan.'],
+      ['Lelongan berjalan', 'Pemenang dimaklumkan dan menerima invois secara automatik apabila masa tamat.'],
+      ['Terima bayaran dan pos', 'Wang jualan masuk terus ke akaun Bayarcash anda. Kemas kini status penghantaran di panel admin.'],
+    ];
+    const STEPS_BIDDER = [
+      ['Daftar akaun', 'Nama, e-mel dan nombor telefon.'],
+      ['Bayar yuran penyertaan', 'RM10 bagi item yang diminati, sekali sahaja, melalui FPX, DuitNow atau kad.'],
+      ['Bida', 'Harga tertinggi dan baki masa dikemas kini secara langsung. Peti masuk memberitahu jika bidaan anda dilepasi.'],
+      ['Bayar jika menang', 'Bayar dalam tempoh yang ditetapkan dan isi alamat penghantaran.'],
+      ['Pembida kedua', 'Jika pemenang tidak membayar, item ditawarkan kepada pembida tertinggi seterusnya.'],
+    ];
+    const stepList = steps => steps.map(([h, p], i) => `
+      <li>
+        <span class="tnum text-[15px] text-muted">${String(i + 1).padStart(2, '0')}</span>
+        <div><p class="h4">${h}</p><p class="mt-1 text-ink-2">${p}</p></div>
+      </li>`).join('');
+    $('stepsSeller').innerHTML = stepList(STEPS_SELLER);
+    $('stepsBidder').innerHTML = stepList(STEPS_BIDDER);
+
+    const PLANS = [
+      { name: 'Starter', price: 'RM 99', per: 'sebulan', cta: 'Pilih Starter' },
+      { name: 'Pro', price: 'RM 249', per: 'sebulan', cta: 'Pilih Pro' },
+      { name: 'Enterprise', price: 'Hubungi kami', per: 'harga ikut keperluan', cta: 'Hubungi kami' },
+    ];
+    const PLAN_ROWS = [
+      ['Sesuai untuk', 'Penjual preloved dan butik kecil', 'Butik dengan lelongan setiap minggu, acara kutipan derma', 'Rangkaian kedai, pertubuhan dengan banyak cawangan'],
+      ['Item aktif serentak', '50', 'Tanpa had', 'Tanpa had'],
+      ['Alamat kedai', 'Subdomain <span class="whitespace-nowrap">nama.ebidbaju.my</span>', 'Domain sendiri dengan SSL', 'Domain sendiri dengan SSL'],
+      ['Logo dan warna sendiri', 'Ya', 'Ya', 'Ya'],
+      ['Pautan "Dikuasakan oleh eBid Baju"', 'Dipaparkan', 'Boleh dibuang', 'Boleh dibuang'],
+      ['Tier, had menang, tempoh bayaran', 'Boleh ubah', 'Boleh ubah', 'Boleh ubah, termasuk peraturan khas'],
+      ['Bilangan kedai', '1', '1', 'Lebih daripada 1'],
+      ['Laporan', 'Yuran dan pemenang', 'Ditambah eksport CSV', 'Ditambah API dan e-Invois'],
+      ['Sokongan', 'E-mel', 'WhatsApp, hari bekerja', 'Pengurus akaun'],
+    ];
+    // Each tile: 1 head row + PLAN_ROWS + 1 button row (11 rows, shared across tiles on wide screens via subgrid)
+    $('plans').innerHTML = PLANS.map((p, i) => `
+      <article class="plan" aria-labelledby="plan-${i}">
+        <div class="pb-5">
+          <h3 class="h3" id="plan-${i}">${p.name}</h3>
+          <p class="price mt-3 text-[32px] text-ink lg:text-[38px]">${p.price}</p>
+          <p class="meta mt-1">${p.per}</p>
+        </div>
+        ${PLAN_ROWS.map(r => `<dl class="plan-row"><dt>${r[0]}</dt><dd>${r[i + 1]}</dd></dl>`).join('')}
+        <div class="plan-cta"><button type="button" class="btn ${p.name === 'Enterprise' ? 'btn-outline' : 'btn-brand'} w-full !min-h-[48px]" data-plan="${p.name}">${p.cta}</button></div>
+      </article>`).join('');
+    document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => U.modal({
+      title: b.dataset.plan === 'Enterprise' ? 'Hubungi kami' : 'Pelan ' + b.dataset.plan,
+      body: `<p>Ini laman demo, jadi pendaftaran belum dibuka dan tiada bayaran dikutip.</p>
+        <p class="mt-3">Untuk melihat apa yang kedai anda akan dapat, buka panel admin kedai demo: urus item, tier, pemenang dan bayaran.</p>`,
+      actions: [{ label: 'Tutup', primary: true }],
+    }));
+
+    const FAQ = [
+      ['Bolehkah pertubuhan menggunakannya untuk kutipan derma?',
+        'Boleh. Admin kedai boleh menetapkan nama acara dan penerima manfaat, dan laman kedai memaparkannya kepada pembida. PAS Kawasan Kota Bharu menggunakan cara ini untuk melelong rompi yang pernah dipakai oleh Tuan Guru Nik Abdul Aziz pada Majlis Makan Malam Kutipan Dana PRU Ke-16, dengan harga mula RM10,000 dan hasil disalurkan kepada dana pilihan raya PAS Kawasan Kota Bharu.'],
+      ['Adakah yuran RM10 dikembalikan jika saya tidak menang?',
+        'Tidak. Yuran penyertaan dibayar sekali bagi setiap item dan tidak dikembalikan, sama ada anda menang atau tidak. Selepas membayar, anda boleh membida item itu berapa kali pun sehingga lelongan tamat.'],
+      ['Bagaimana jika pemenang tidak membayar?',
+        'Pemenang menerima invois dan perlu membayar dalam tempoh yang kedai tetapkan, biasanya antara 12 dan 48 jam. Selepas tempoh tamat, admin menawarkan item kepada pembida tertinggi kedua pada harga bidaannya. Pemenang asal hilang hak ke atas item itu.'],
+      ['Bolehkah bidaan dibatalkan?',
+        'Tidak. Setiap bidaan muktamad, dan pembida diberitahu tentang perkara ini sebelum membida. Untuk mengelakkan salah taip, sistem menolak amaun yang melebihi 20 kali bidaan minima.'],
+      ['Adakah kedai perlu akaun Bayarcash sendiri?',
+        'Ya. Bayaran pemenang masuk terus ke akaun Bayarcash kedai, jadi kedai memerlukan akaun yang aktif. Yuran penyertaan pula dikutip oleh akaun platform, dan bahagian kedai diselesaikan mengikut perjanjian.'],
+      ['Apakah kaedah pembayaran yang disokong?',
+        'FPX (perbankan dalam talian), DuitNow, serta kad kredit dan debit, semuanya melalui Bayarcash.'],
+      ['Bolehkah saya menggunakan domain sendiri?',
+        'Ya, untuk pelan Pro dan Enterprise, contohnya lelong.butikanda.my. Pelan Starter menggunakan subdomain eBid Baju.'],
+      ['Adakah eBid Baju berkaitan dengan JPJ?',
+        'Tidak. Kami hanya mengadaptasi peraturan JPJeBid kerana ramai pembeli di Malaysia sudah memahaminya. Satu perbezaan: JPJeBid menggunakan bidaan tertutup, manakala eBid Baju menggunakan lelongan terbuka yang memaparkan bidaan tertinggi secara langsung.'],
+    ];
+    const plus = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 3v14M3 10h14"/></svg>';
+    $('faq').innerHTML = FAQ.map(([q, a]) => `
+      <details class="faq">
+        <summary><span>${q}</span>${plus}</summary>
+        <p class="max-w-[66ch] pb-7 text-[16px] text-ink-2">${a}</p>
+      </details>`).join('');
+
+    $('resetDemo').onclick = () => U.modal({
+      title: 'Set semula data demo?',
+      body: 'Semua bidaan, bayaran dan mesej dalam pelayar ini akan dipadam, dan data contoh dimuat semula untuk semua kedai.',
+      actions: [{ label: 'Batal' }, { label: 'Set semula', danger: true, onClick: () => { EB.store.reset(); location.reload(); } }],
+    });
+
+    /* ---------- tier example (from the demo state) ---------- */
+    function renderTiers() {
+      const t = EB.tenant.bySlug('paskb') || EB.tenant.all()[0];
+      const mult = t.settings.lastWindowMultiplier || 2;
+      const win = t.settings.lastWindowMin || 30;
+      $('tierTable').innerHTML = `
+        <caption class="sr-only">Tier harga ${esc(t.name)}</caption>
+        <thead><tr><th scope="col">Tier</th><th scope="col" class="num">Harga mula</th><th scope="col" class="num">Kenaikan minima</th><th scope="col" class="num">${win} minit terakhir</th></tr></thead>
+        <tbody>${t.tiers.map(x => `<tr>
+          <td class="font-medium text-ink">${esc(x.name)}</td>
+          <td class="num">${U.money(x.minPrice)}</td><td class="num">${U.money(x.increment)}</td><td class="num">${U.money(x.increment * mult)}</td></tr>`).join('')}</tbody>`;
+      const ex = t.tiers.find(x => x.id === 'istimewa') || t.tiers[0];
+      const cur = ex.minPrice + ex.increment * 3;
+      $('tierExample').innerHTML = `Contoh: bidaan tertinggi bagi item ${esc(ex.name)} ialah <span class="whitespace-nowrap tnum text-ink">${U.money(cur)}</span>. Bidaan seterusnya mesti sekurang-kurangnya <span class="whitespace-nowrap tnum text-ink">${U.money(cur + ex.increment)}</span>, atau <span class="whitespace-nowrap tnum text-ink">${U.money(cur + ex.increment * mult)}</span> jika lelongan tinggal kurang ${win} minit.`;
+    }
+    renderTiers();
+
+    /* ---------- live parts ---------- */
+    const sigs = {};
+    function setIfChanged(key, el, sig, html) {
+      if (sigs[key] === sig) return false;
+      sigs[key] = sig; el.innerHTML = html(); return true;
+    }
+    let lastPrice = null;
+
+    function heroItem(s) {
+      return s.items.find(i => i.id === 'pas1')
+        || s.items.find(i => A.status(i) === 'live') || s.items[0];
+    }
+
+    function renderHero() {
+      const s = EB.store.get();
+      const item = heroItem(s);
+      if (!item) { $('heroLot').innerHTML = '<p class="py-6 meta">Tiada item dalam data demo. Set semula data demo di bahagian bawah halaman.</p>'; return; }
+      const t = s.tenants.find(x => x.slug === item.tenant);
+      const tier = t.tiers.find(x => x.id === item.tier) || t.tiers[0];
+      const st = A.status(item);
+      const bids = A.bidsFor(item.id, s);
+      const top = bids[0];
+      const price = top ? top.amount : item.startPrice;
+      const last = st === 'live' && A.isLastWindow(item, s);
+      const next = st === 'live' ? A.minNextBid(item, s) : null;
+      const priceLabel = st === 'ended' ? (top ? 'Harga akhir' : 'Tiada bidaan') : (top ? 'Bidaan tertinggi' : 'Harga mula');
+      const timeCell = st === 'live'
+        ? `<dt>Tamat dalam</dt><dd data-countdown-end="${item.endAt}">${U.countdown(item.endAt - Date.now())}</dd>`
+        : st === 'upcoming'
+          ? `<dt>Bermula dalam</dt><dd data-countdown-start="${item.startAt}">${U.countdown(item.startAt - Date.now())}</dd>`
+          : `<dt>Tamat pada</dt><dd>${esc(U.fmtDate(item.endAt))}</dd>`;
+      const itemUrl = U.link('item.html', { shop: t.slug, id: item.id });
+      const changed = setIfChanged('hero', $('heroLot'), JSON.stringify([item.id, st, price, bids.length, next, last, item.title]), () => `
+        <div class="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-4 gap-y-2 py-6 md:grid-cols-[72px_minmax(0,1fr)_auto] md:gap-x-6 md:py-8">
+          <a href="${itemUrl}" tabindex="-1" aria-hidden="true" class="row-span-2 self-start md:row-span-1 md:self-center">
+            <img src="${U.itemImage(item)}" alt="" class="aspect-[4/5] w-full rounded-lg bg-tile object-cover object-top">
+          </a>
+          <div class="min-w-0">
+            <p class="flex flex-wrap items-center gap-x-3 gap-y-1"><span class="lot">${esc(U.lotNo(item))} · Tier ${esc(tier.name)}</span>${U.statusBadge(st)}</p>
+            <p class="lot-title mt-1 text-[19px] text-ink md:text-[24px]"><a href="${itemUrl}" class="hover:underline decoration-1 underline-offset-4">${esc(item.title)}</a></p>
+            <p class="meta mt-1">${esc(t.name)}${t.event ? ' · ' + esc(t.event) : ''}</p>
+          </div>
+          <a class="link-arrow col-start-2 md:col-start-auto" href="${itemUrl}">Lihat lot ini</a>
+        </div>
+        <dl class="spec">
+          <div class="s-price"><dt>${priceLabel}</dt><dd class="price" data-hero-price>${U.money(price)}</dd></div>
+          <div>${timeCell}</div>
+          <div><dt>Bidaan</dt><dd>${bids.length}</dd></div>
+          ${next != null ? `<div><dt>Bidaan minima seterusnya</dt><dd>${U.money(next)}<span class="s-note">${last ? '<span class="status status-warn">Kenaikan &times;2, 30 minit terakhir</span>' : `Kenaikan ${U.money(A.increment(item, s))}`}</span></dd></div>` : ''}
+        </dl>`);
+      if (changed) {
+        if (lastPrice !== null && price !== lastPrice) {
+          const el = document.querySelector('[data-hero-price]'); if (el) el.classList.add('bump');
+        }
+        lastPrice = price;
+      }
+      // the sale-money row in the pricing example uses the same lot
+      $('saleLabel').innerHTML = `Wang jualan item<span class="block text-[13px] text-muted">cth. ${esc(U.lotNo(item))}, ${esc(t.name)}, pada ${top ? 'bidaan semasa' : 'harga mula'}</span>`;
+      $('saleValue').innerHTML = `<span class="whitespace-nowrap">${U.money(price)}</span><span class="block text-[13px] text-muted">100% ke akaun Bayarcash kedai</span>`;
+    }
+
+    function renderShops() {
+      return; // shop list removed: the platform never lists its merchants (white-label)
+      const s = EB.store.get();
+      const now = Date.now();
+      const tenants = s.tenants.slice().sort((a, b) => (b.slug === 'paskb') - (a.slug === 'paskb'));
+      const rows = tenants.map(t => {
+        const items = s.items.filter(i => i.tenant === t.slug);
+        const live = items.filter(i => A.status(i, now) === 'live').length;
+        return { t, total: items.length, live };
+      });
+      setIfChanged('shops', $('shopList'), JSON.stringify(rows.map(r => [r.t.slug, r.t.name, r.t.tagline, r.t.domain, r.t.colors, r.t.logoText, r.t.logoUrl, r.total, r.live])), () => rows.map(({ t, total, live }) => {
+        const charity = !!(t.event || t.beneficiary);
+        return `<li class="shop-row grid grid-cols-[40px_minmax(0,1fr)] gap-x-4 gap-y-3 py-6 md:grid-cols-[40px_minmax(0,1fr)_auto] md:items-center md:gap-x-6"
+              style="--t-brand:${esc(t.colors.brand)};--t-ink:${esc(t.colors.ink || '#fff')}">
+          ${U.logoMark(t)}
+          <div class="min-w-0">
+            <p class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <a href="shop.html?shop=${encodeURIComponent(t.slug)}" class="inline-block py-2.5 -my-2.5 font-serif text-[21px] leading-tight text-ink hover:underline decoration-1 underline-offset-4">${esc(t.name)}</a>
+              ${charity ? '<span class="text-[14px] text-muted">Acara kutipan derma</span>' : ''}
+            </p>
+            <p class="mt-1 text-ink-2">${esc(t.tagline)}</p>
+            <p class="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-muted">
+              <span>${esc(t.domain)}</span>
+              <span class="tnum"><span class="text-ink">${live}</span> langsung daripada ${total} lot</span>
+            </p>
+          </div>
+          <div class="col-start-2 flex flex-wrap items-center gap-x-6 gap-y-1 md:col-start-auto">
+            <a class="btn btn-outline btn-sm !min-h-[44px] !px-5 !text-[15px]" href="shop.html?shop=${encodeURIComponent(t.slug)}" aria-label="Buka kedai ${esc(t.name)}">Buka kedai</a>
+            <a class="link-arrow text-[15px]" href="admin/index.html?shop=${encodeURIComponent(t.slug)}" aria-label="Panel admin ${esc(t.name)}">Admin</a>
+          </div>
+        </li>`;
+      }).join(''));
+      const n = rows.length, words = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam'];
+      setIfChanged('lede', $('shopLede'), String(n), () => (n === 1
+        ? 'Satu kedai pada platform ini, dengan warna, logo dan domain sendiri. Masuk dan cuba membida; data disimpan dalam pelayar anda sahaja.'
+        : `${words[n] || n} kedai pada platform yang sama, setiap satu dengan warna, logo dan domain sendiri. Masuk dan cuba membida; data disimpan dalam pelayar anda sahaja.`));
+      setIfChanged('foot', $('footShops'), JSON.stringify(rows.map(r => [r.t.slug, r.t.name])), () => rows.map(({ t }) =>
+        `<li><a class="fl" href="shop.html?shop=${encodeURIComponent(t.slug)}">${esc(t.name)}</a></li>`).join(''));
+    }
+
+    function renderLive() { renderHero(); renderShops(); U.tickCountdowns(); }
+    renderLive();
+    EB.store.subscribe(renderLive);
+    // statuses change with time even without store writes (start/end, last 30 minutes)
+    setInterval(renderLive, 5000);
+  </script>
+</body>
+</html>

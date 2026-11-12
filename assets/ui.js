@@ -19,6 +19,10 @@
     const u = new URL(ROOT + path, location.href);
     const shop = EB.tenant.slug();
     if (!params || params.shop === undefined) u.searchParams.set('shop', shop);
+    // keep ad attribution (utm_*, fbclid, gclid…) on every internal link
+    new URLSearchParams(location.search).forEach((v, k) => {
+      if ((/^utm_/.test(k) || ['fbclid', 'gclid', 'ttclid', 'msclkid'].includes(k)) && !u.searchParams.has(k)) u.searchParams.set(k, v);
+    });
     Object.entries(params || {}).forEach(([k, v]) => { if (v !== undefined && v !== null) u.searchParams.set(k, v); });
     return u.pathname + u.search + u.hash;
   }
@@ -200,13 +204,12 @@
     const unread = unreadCount();
     const on = k => (active === k ? 'nav-active' : '');
     const badge = n => n ? `<span id="eb-unread" class="ml-1 min-w-[18px] rounded-sm bg-[var(--accent)] px-1 text-center text-[12px] font-semibold leading-[18px] tabular-nums text-[var(--ink)]">${n}</span>` : '';
+    // Short menu for the ad flow (owner: "ringkaskan"). History and favourites pages still exist.
     const nav = `
       <a href="${link('shop.html')}" class="nav-link ${on('shop')}">Utama</a>
+      <a href="${link('my-bids.html')}" class="nav-link ${active === 'bids' ? 'nav-active' : ''}">Bidaan saya</a>
       <a href="${link('inbox.html')}" class="nav-link ${on('inbox')}">Peti masuk${badge(unread)}</a>
-      ${dropdown('Bidaan', [{ label: 'Cari item', href: link('shop.html') + '#cari' }, { label: 'Bidaan semasa saya', href: link('my-bids.html') }], active === 'bids')}
-      ${dropdown('Sejarah', [{ label: 'Sejarah bidaan saya', href: link('history.html') + '#sejarah' }, { label: 'Senarai pemenang', href: link('history.html') + '#pemenang' }], active === 'history')}
-      <a href="${link('favourites.html')}" class="nav-link ${on('fav')}">Kegemaran</a>
-      ${dropdown('Akaun', [{ label: 'Profil', href: link('profile.html') }, { label: 'Tukar katalaluan', href: link('profile.html') + '#katalaluan' }], active === 'account')}`;
+      <a href="${link('profile.html')}" class="nav-link ${active === 'account' || active === 'history' || active === 'fav' ? 'nav-active' : ''}">Akaun</a>`;
     el.innerHTML = `
       <header class="site-header">
         <div class="max-w-6xl mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
@@ -250,7 +253,7 @@
           <div class="min-w-0"><div class="font-semibold leading-tight truncate">${esc(t.name)}</div>
           <div class="text-[12px] text-white/55 leading-tight">Panel admin · <span class="font-mono">${esc(t.domain)}</span></div></div>
           <div class="ml-auto flex items-center gap-2 text-[13px]">
-            ${EB.tenant.all().length > 1 ? `<label class="sr-only" for="eb-shop-switch">Tukar kedai</label><select id="eb-shop-switch" data-shop class="h-10 md:h-8 rounded bg-white/10 px-2 text-white border border-white/15">${EB.tenant.all().map(x => `<option class="text-black" value="${x.slug}" ${x.slug === t.slug ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : ''}
+            
             <a href="${link('shop.html')}" class="btn btn-sm border border-white/20 text-white hover:bg-white/10">Lihat kedai</a>
           </div>
         </div>
@@ -271,30 +274,28 @@
           
           <div><div class="font-semibold leading-tight">${esc(window.EB_DATA.platform.name)}</div>
           <div class="text-[12px] text-white/55">Super admin platform</div></div>
-          <a href="${ROOT}index.html" class="ml-auto btn btn-sm border border-white/20 text-white hover:bg-white/10">Laman platform</a>
+          <a href="${ROOT}platform.html" class="ml-auto btn btn-sm border border-white/20 text-white hover:bg-white/10">Laman platform</a>
         </div>
       </header>`;
   }
 
-  function renderFooter() {
+  /** White-label footer: shop name only. Admin link for the shop; reset only inside admin. */
+  function renderFooter(area) {
     const el = document.getElementById('eb-footer');
     if (!el) return;
     const t = EB.tenant.current();
     el.innerHTML = `
       <footer class="mt-20 border-t border-[var(--line)] bg-[var(--surface)]">
         <div class="max-w-6xl mx-auto px-4 md:px-6 py-6 text-[13px] text-[var(--muted)] flex flex-col md:flex-row gap-4 md:items-center">
-          <div>© 2026 ${esc(t.name)} · Dikuasakan oleh <a class="eb-foot-link underline underline-offset-2" href="${ROOT}index.html">${esc(window.EB_DATA.platform.name)}</a></div>
+          <div>© 2026 ${esc(t.name)}</div>
           <div class="md:ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span class="eyebrow">Demo</span>
-            ${EB.tenant.all().length > 1 ? `<label class="sr-only" for="eb-foot-shop">Tukar kedai</label><select id="eb-foot-shop" data-shop class="input !min-h-[32px] !w-auto !py-1 text-[13px]">${EB.tenant.all().map(x => `<option value="${x.slug}" ${x.slug === t.slug ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : ''}
-            <a class="eb-foot-link underline underline-offset-2 hover:text-[var(--ink)]" href="${link('admin/index.html')}">Admin kedai</a>
-            <a class="eb-foot-link underline underline-offset-2 hover:text-[var(--ink)]" href="${ROOT}super/index.html">Super admin</a>
-            <button data-reset class="eb-foot-link underline underline-offset-2 text-[var(--live)]">Reset data demo</button>
+            ${area === 'admin' ? '' : `<a class="eb-foot-link underline underline-offset-2 hover:text-[var(--ink)]" href="${link('admin/index.html')}">Admin</a>`}
+            ${area === 'admin' ? `<button data-reset class="eb-foot-link underline underline-offset-2 text-[var(--live)]">Reset data demo</button>` : ''}
           </div>
         </div>
       </footer>`;
     if (el.querySelector('[data-shop]')) el.querySelector('[data-shop]').onchange = e => { location.href = link('shop.html', { shop: e.target.value }); };
-    el.querySelector('[data-reset]').onclick = () => modal({
+    if (el.querySelector('[data-reset]')) el.querySelector('[data-reset]').onclick = () => modal({
       title: 'Reset data demo?',
       body: 'Semua bidaan, bayaran dan mesej dalam browser ini akan dipadam, dan data contoh dimuat semula.',
       actions: [{ label: 'Batal' }, { label: 'Reset data', danger: true, onClick: () => { EB.store.reset(); location.reload(); } }],
@@ -378,6 +379,42 @@
     });
   }
 
+  /* ---------- Facebook / Meta Pixel ----------
+   * Set the Pixel ID in Admin > Tetapan (tenant.pixel.id). Bidder pages only; never on admin pages.
+   * EB.pixel.track('ViewContent', {...}) / EB.pixel.custom('PlaceBid', {...}). Events also log to the console.
+   * Purchase events are OFF by default in this demo (payments are mock): turn on in settings for real payments. */
+  const pixel = {
+    ready: false,
+    init() {
+      const t = EB.tenant.current();
+      const id = t && t.pixel && String(t.pixel.id || '').trim();
+      if (!id || !/^\d{10,20}$/.test(id) || this.ready) return;
+      /* eslint-disable */
+      !function (f, b, e, v, n, t2, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+        if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t2 = b.createElement(e); t2.async = !0; t2.src = v;
+        s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t2, s); }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+      /* eslint-enable */
+      window.fbq('init', id);
+      window.fbq('track', 'PageView');
+      this.ready = true;
+      console.info('[pixel] PageView', id);
+    },
+    allowed(event) {
+      const t = EB.tenant.current();
+      return event !== 'Purchase' || !!(t && t.pixel && t.pixel.sendPurchase);
+    },
+    track(event, params) {
+      if (!this.allowed(event)) { console.info('[pixel] skipped (demo payment)', event, params || {}); return; }
+      console.info('[pixel]', event, params || {});
+      if (this.ready && window.fbq) window.fbq('track', event, Object.assign({ currency: 'MYR' }, params || {}));
+    },
+    custom(event, params) {
+      console.info('[pixel] custom', event, params || {});
+      if (this.ready && window.fbq) window.fbq('trackCustom', event, Object.assign({ currency: 'MYR' }, params || {}));
+    },
+  };
+  EB.pixel = pixel;
+
   /**
    * EB.init({ area: 'bidder'|'admin'|'super'|'platform', active: 'shop'|'inbox'|... , engine: true })
    * Applies the tenant theme, renders header/footer, starts countdowns + bot engine.
@@ -389,11 +426,12 @@
     if (area === 'bidder') renderHeader(opts.active);
     if (area === 'admin') renderAdminHeader(opts.active);
     if (area === 'super') renderSuperHeader();
-    if (area === 'bidder' || area === 'admin') renderFooter();
+    if (area === 'bidder' || area === 'admin') renderFooter(area);
     tickCountdowns();
     setInterval(tickCountdowns, 1000);
     if (opts.engine !== false) EB.auction.startEngine();
     if (area === 'bidder') watchBids(opts.active);
+    if (area === 'bidder') { try { pixel.init(); } catch (e) { console.warn('[pixel]', e); } }
     EB.store.subscribe((state, source) => {
       if (area !== 'bidder') return;
       if (source === 'auth') renderHeader(opts.active); else refreshUnread();

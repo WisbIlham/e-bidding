@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Profil · eBid Baju</title>
+  <title>Profil</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="assets/tw-config.js?v=20261112b"></script>
-  <link rel="stylesheet" href="assets/app.css?v=20261112b">
-  <script src="assets/data.js?v=20261112b"></script>
-  <script src="assets/store.js?v=20261112b"></script>
-  <script src="assets/auction.js?v=20261112b"></script>
-  <script src="assets/ui.js?v=20261112b"></script>
+  <script src="assets/tw-config.js?v=20261112c"></script>
+  <link rel="stylesheet" href="assets/app.css?v=20261112c">
+  <script src="assets/data.js?v=20261112c"></script>
+  <script src="assets/store.js?v=20261112c"></script>
+  <script src="assets/auction.js?v=20261112c"></script>
+  <script src="assets/ui.js?v=20261112c"></script>
   <style>
     section[id] { scroll-margin-top: 120px; }
     .input:disabled { background: var(--tile); border-color: transparent; color: var(--ink-2); cursor: not-allowed; -webkit-text-fill-color: var(--ink-2); opacity: 1; }
@@ -48,12 +48,13 @@
     function statsHtml() {
       const s = EB.store.get();
       const uid = EB.auth.userId();
-      const bids = s.bids.filter(b => b.userId === uid);
-      const wins = s.orders.filter(o => o.userId === uid && o.status !== 'passed');
-      const fees = s.fees.filter(f => f.userId === uid);
+      const here = EB.tenant.slug();
+      const bids = s.bids.filter(b => b.userId === uid && b.tenant === here);
+      const wins = s.orders.filter(o => o.userId === uid && o.status !== 'passed' && o.tenant === here);
+      const fees = s.fees.filter(f => f.userId === uid && f.tenant === here);
       const feeSum = fees.reduce((a, f) => a + f.amount, 0);
       const cell = (label, val, cls) => `<div class="min-w-0 ${cls}"><div class="eyebrow">${label}</div><div class="price mt-2 text-[28px] md:text-[34px] text-ink whitespace-nowrap">${val}</div></div>`;
-      const perShop = s.tenants.map(t => ({
+      const perShop = [].map(t => ({
         t,
         bids: bids.filter(b => b.tenant === t.slug).length,
         wins: wins.filter(o => o.tenant === t.slug).length,
@@ -70,7 +71,7 @@
             <td class="text-ink !pl-0">${U.esc(r.t.name)}</td>
             <td class="num tabular-nums">${r.bids}</td><td class="num tabular-nums">${r.wins}</td><td class="num tabular-nums whitespace-nowrap !pr-0">${U.money(r.fees)}</td></tr>`).join('')}</tbody>
         </table></div>` : `<div class="mt-5"><p class="meta">Belum ada aktiviti bidaan.</p><a class="link-arrow min-h-[44px]" href="${U.link('shop.html')}">Lihat item lelongan</a></div>`}
-        <p class="meta mt-3">Merangkumi semua kedai eBid Baju yang menggunakan akaun yang sama.</p>`;
+        <p class="meta mt-3">Statistik bidaan anda di sini.</p>`;
     }
 
     const NAV = [['profil', 'Profil'], ['katalaluan', 'Katalaluan'], ['statistik', 'Statistik']];

@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eBid Baju</title>
+  <title>Bidaan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="assets/tw-config.js?v=20261112b"></script>
-  <link rel="stylesheet" href="assets/app.css?v=20261112b">
-  <script src="assets/data.js?v=20261112b"></script>
-  <script src="assets/store.js?v=20261112b"></script>
-  <script src="assets/auction.js?v=20261112b"></script>
-  <script src="assets/ui.js?v=20261112b"></script>
+  <script src="assets/tw-config.js?v=20261112c"></script>
+  <link rel="stylesheet" href="assets/app.css?v=20261112c">
+  <script src="assets/data.js?v=20261112c"></script>
+  <script src="assets/store.js?v=20261112c"></script>
+  <script src="assets/auction.js?v=20261112c"></script>
+  <script src="assets/ui.js?v=20261112c"></script>
 </head>
 <body class="min-h-screen">
   <div id="eb-header"></div>
@@ -80,26 +80,19 @@
 
         <div id="pane-register" role="tabpanel" aria-labelledby="tab-register" class="mt-8 hidden">
           <form id="f-reg" novalidate class="space-y-5">
-            ${field('r-name', 'Nama penuh', '<input id="r-name" class="input" autocomplete="name" placeholder="Nur Aisyah binti Ahmad" aria-describedby="r-name-hint r-name-err">', 'Seperti dalam kad pengenalan. Nama ini digunakan pada invois jika anda menang.')}
-            ${field('r-ic', 'No. kad pengenalan', '<input id="r-ic" class="input num" inputmode="numeric" placeholder="900101-14-5678" maxlength="14" aria-describedby="r-ic-err">')}
-            ${field('r-phone', 'No. telefon', '<input id="r-phone" type="tel" class="input" autocomplete="tel" placeholder="012-345 6789" aria-describedby="r-phone-err">')}
+            ${field('r-name', 'Nama penuh', '<input id="r-name" class="input" autocomplete="name" placeholder="Nur Aisyah binti Ahmad" aria-describedby="r-name-hint r-name-err">', 'Seperti dalam kad pengenalan. Digunakan pada invois jika anda menang.')}
+            ${field('r-phone', 'No. telefon', '<input id="r-phone" type="tel" inputmode="tel" class="input" autocomplete="tel" placeholder="012-345 6789" aria-describedby="r-phone-err">')}
             ${field('r-email', 'E-mel', '<input id="r-email" type="email" class="input" autocomplete="email" placeholder="nama@emel.com" aria-describedby="r-email-err">')}
             ${field('r-pass', 'Katalaluan', '<input id="r-pass" type="password" class="input" autocomplete="new-password" aria-describedby="r-pass-hint r-pass-err">', 'Sekurang-kurangnya 8 aksara.')}
-            <div>
-              <label class="flex cursor-pointer items-start gap-3 py-1 text-[15px] text-[var(--ink-2)]"><input id="r-agree" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 accent-[var(--ink)]" aria-describedby="r-agree-err">
-                <span>Saya faham bahawa yuran penyertaan <span class="num">${ui.money(t.settings.fee)}</span> setiap lot tidak dikembalikan, dan bidaan yang disahkan tidak boleh dibatalkan.</span></label>
-              <p class="field-error hidden" id="r-agree-err"></p>
-            </div>
             <p id="r-err" class="field-error hidden" role="alert"></p>
             <button class="btn btn-brand btn-lg mt-2 w-full">Daftar dan log masuk</button>
+            <p class="meta">Dengan mendaftar, anda faham bahawa yuran penyertaan <span class="num">${ui.money(t.settings.fee)}</span> setiap lot tidak dikembalikan, dan bidaan yang disahkan tidak boleh dibatalkan.</p>
           </form>
         </div>
 
         <div class="mt-16 border-t border-line pt-5 text-[14px] text-[var(--muted)]">
-          <p>Panel pentadbir (demo):
-            <a href="${ui.link('admin/index.html')}" class="inline-flex min-h-[44px] items-center underline underline-offset-4 hover:text-[var(--ink)]">Admin kedai</a>
-            ·
-            <a href="${ui.ROOT}super/index.html" class="inline-flex min-h-[44px] items-center underline underline-offset-4 hover:text-[var(--ink)]">Super admin</a></p>
+          <p>Urus setia:
+            <a href="${ui.link('admin/index.html')}" class="inline-flex min-h-[44px] items-center underline underline-offset-4 hover:text-[var(--ink)]">Admin</a></p>
           <p>Demo sahaja. Tiada data dihantar ke pelayan.</p>
         </div>
       </div>`;
@@ -174,9 +167,13 @@
       if (msg) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
     }
     const err = (id, msg) => { const el = $(id); el.innerHTML = msg || ''; el.classList.toggle('hidden', !msg); };
-    ['l-email', 'l-pass', 'r-name', 'r-ic', 'r-phone', 'r-email', 'r-pass'].forEach(id => $(id).addEventListener('input', () => { setErr(id, ''); err(id[0] + '-err', ''); }));
-    $('r-agree').addEventListener('change', () => setErr('r-agree', ''));
+    ['l-email', 'l-pass', 'r-name', 'r-phone', 'r-email', 'r-pass'].forEach(id => $(id).addEventListener('input', () => { setErr(id, ''); err(id[0] + '-err', ''); }));
     const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    /* Malaysian mobile: 01X-XXX XXXX (10 digits) or 011-XXXX XXXX (11 digits); +60 / 60 accepted */
+    const phoneDigits = v => { let d = String(v || '').replace(/\D/g, ''); if (/^60(1\d{8,9})$/.test(d)) d = '0' + d.slice(2); return d; };
+    const phoneOk = v => /^01\d{8,9}$/.test(phoneDigits(v));
+    const phoneFmt = v => { const d = phoneDigits(v); return !phoneOk(v) ? String(v || '').trim() : d.length === 10 ? d.slice(0, 3) + '-' + d.slice(3, 6) + ' ' + d.slice(6) : d.slice(0, 3) + '-' + d.slice(3, 7) + ' ' + d.slice(7); };
+    $('r-phone').addEventListener('blur', e => { e.target.value = phoneFmt(e.target.value); });
 
     /* ---------- email login ---------- */
     $('f-login').addEventListener('submit', e => {
@@ -203,38 +200,34 @@
     $('l-err').addEventListener('click', e => { if (e.target.closest('[data-goreg]')) { $('r-email').value = $('l-email').value.trim(); setTab('register', true); } });
 
     /* ---------- register ---------- */
-    $('r-ic').addEventListener('input', e => {
-      const d = e.target.value.replace(/\D/g, '').slice(0, 12);
-      e.target.value = d.length > 8 ? d.slice(0, 6) + '-' + d.slice(6, 8) + '-' + d.slice(8) : d.length > 6 ? d.slice(0, 6) + '-' + d.slice(6) : d;
-    });
+    let submitted = false;
     $('f-reg').addEventListener('submit', e => {
       e.preventDefault();
       const v = id => $(id).value.trim();
-      const name = v('r-name'), ic = v('r-ic'), email = v('r-email').toLowerCase(), phone = v('r-phone'), pass = $('r-pass').value;
+      const name = v('r-name'), email = v('r-email').toLowerCase(), phone = v('r-phone'), pass = $('r-pass').value;
       const s = EB.store.get();
       const errs = {};
       if (!name) errs['r-name'] = 'Masukkan nama penuh anda.';
       else if (name.length < 3) errs['r-name'] = 'Nama terlalu pendek. Tulis nama penuh seperti dalam kad pengenalan.';
-      if (!ic) errs['r-ic'] = 'Masukkan no. kad pengenalan.';
-      else if (ic.replace(/\D/g, '').length !== 12) errs['r-ic'] = 'No. kad pengenalan mesti 12 digit, contoh 900101-14-5678.';
-      else if (s.users.some(u => u.ic && u.ic.replace(/\D/g, '') === ic.replace(/\D/g, ''))) errs['r-ic'] = 'No. kad pengenalan ini sudah didaftarkan. Sila log masuk.';
       if (!phone) errs['r-phone'] = 'Masukkan no. telefon.';
-      else if (phone.replace(/\D/g, '').length < 9) errs['r-phone'] = 'No. telefon tidak lengkap. Contoh: 012-345 6789';
+      else if (!phoneOk(phone)) errs['r-phone'] = 'No. telefon bimbit tidak sah. Contoh: 012-345 6789';
       if (!email) errs['r-email'] = 'Masukkan e-mel anda.';
       else if (!EMAIL.test(email)) errs['r-email'] = 'Format e-mel tidak sah. Contoh: nama@emel.com';
       else if (s.users.some(u => String(u.email || '').toLowerCase() === email)) errs['r-email'] = 'E-mel ini sudah didaftarkan. Sila log masuk.';
       if (!pass) errs['r-pass'] = 'Cipta katalaluan.';
       else if (pass.length < 8) errs['r-pass'] = 'Katalaluan mesti sekurang-kurangnya 8 aksara.';
-      if (!$('r-agree').checked) errs['r-agree'] = 'Tandakan kotak ini untuk bersetuju dengan terma lelongan.';
-      ['r-name', 'r-ic', 'r-phone', 'r-email', 'r-pass', 'r-agree'].forEach(id => setErr(id, errs[id]));
+      ['r-name', 'r-phone', 'r-email', 'r-pass'].forEach(id => setErr(id, errs[id]));
       const bad = Object.keys(errs);
       err('r-err', bad.length > 1 ? `Sila betulkan ${bad.length} ruangan di atas.` : '');
       if (bad.length) { $(bad[0]).focus(); return; }
-      const user = { id: EB.store.uid('u'), role: 'bidder', name, ic, email, phone, createdAt: Date.now() };
+      if (submitted) return; // one account (and one CompleteRegistration) per submit, even on a double tap
+      submitted = true;
+      const user = { id: EB.store.uid('u'), role: 'bidder', name, email, phone: phoneFmt(phone), createdAt: Date.now() };
       EB.store.update(st => {
         st.users.push(user);
         st.inbox.push({ id: EB.store.uid('msg'), userId: user.id, tenant: EB.tenant.slug(), type: 'info', title: 'Selamat datang ke ' + EB.tenant.current().name, body: 'Akaun anda telah berjaya didaftarkan. Selamat membida.', itemId: null, at: Date.now(), read: false });
       });
+      if (EB.pixel) EB.pixel.track('CompleteRegistration', { content_name: 'Daftar pembida' });
       finish(user, 'Akaun didaftarkan. Selamat datang, ' + name + '.');
     });
 

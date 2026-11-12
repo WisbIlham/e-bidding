@@ -46,7 +46,8 @@
 
   /** Merchant shown on the payment page. fee → platform account; order → the shop's own Bayarcash account. */
   function merchantFor(kind, slug) {
-    if (kind !== 'order') return Object.assign({}, PLATFORM_MERCHANT);
+    // Owner's rule (2026-11-12): the Bayarcash page always names the SHOP (its portal under our Bayarcash account),
+    // for the RM10 fee too. PLATFORM_MERCHANT is only a fallback when the shop has no merchant name.
     const t = EB.tenant.bySlug(slug) || {};
     if (t.merchant && t.merchant.name) {
       return {
@@ -67,7 +68,7 @@
 
   /** Merchant return URL with ?pay_intent=&pay_status= appended (other params kept). */
   function returnHref(intent, status) {
-    const u = new URL(intent.returnUrl || (EB.ui.ROOT + 'index.html'), location.href);
+    const u = new URL(intent.returnUrl || (EB.ui.ROOT + 'shop.html'), location.href);
     u.searchParams.set('pay_intent', intent.id);
     u.searchParams.set('pay_status', status || intent.status);
     return u.href;

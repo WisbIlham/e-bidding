@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tetapan & jenama · eBid Baju</title>
+  <title>Tetapan & jenama</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="../assets/tw-config.js?v=20261112b"></script>
-  <link rel="stylesheet" href="../assets/app.css?v=20261112b">
-  <script src="../assets/data.js?v=20261112b"></script>
-  <script src="../assets/store.js?v=20261112b"></script>
-  <script src="../assets/auction.js?v=20261112b"></script>
-  <script src="../assets/ui.js?v=20261112b"></script>
+  <script src="../assets/tw-config.js?v=20261112c"></script>
+  <link rel="stylesheet" href="../assets/app.css?v=20261112c">
+  <script src="../assets/data.js?v=20261112c"></script>
+  <script src="../assets/store.js?v=20261112c"></script>
+  <script src="../assets/auction.js?v=20261112c"></script>
+  <script src="../assets/ui.js?v=20261112c"></script>
   <style>
     .swatch { height: 44px; width: 52px; border-radius: 8px; border: 1px solid var(--line-strong); padding: 3px; background: var(--surface); cursor: pointer; flex: none; }
     .sec { padding: 2.25rem 0 2.5rem; }
@@ -32,6 +32,17 @@
     .pv-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .pv-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(1,2,5,.72), rgba(1,2,5,.15) 55%, rgba(1,2,5,0)); }
     .pv-hero .pv-copy { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 14px 16px; color: #fff; }
+    /* tiny Bayarcash "Merchant Details" preview: keeps Bayarcash's own plain look (third-party page) */
+    .bc-pv { background: #fff; border: 1px solid rgba(0,0,0,.125); border-radius: 4px; padding: 14px 16px; color: #212529;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+    .bc-pv h3 { font-size: 14.5px; font-weight: 500; margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid #dee2e6; }
+    .bc-pv dl { margin: 0; }
+    .bc-pv dl > div { display: grid; grid-template-columns: 40% minmax(0, 1fr); padding: 3px 0; }
+    .bc-pv dt { font-weight: 500; padding-right: 8px; }
+    .bc-pv dd { margin: 0; position: relative; padding-left: 14px; overflow-wrap: anywhere; }
+    .bc-pv dd::before { content: ":"; position: absolute; left: 0; color: #444; }
+    .bc-pv dd.is-demo { color: #6c757d; }
+    .ev-name { font-variant-numeric: tabular-nums; color: var(--ink); }
   </style>
 </head>
 <body class="min-h-screen pb-[72px]">
@@ -167,6 +178,23 @@
           </div>
         </section>
 
+        <!-- Bayarcash merchant -->
+        <section class="sec" id="sec-merchant">
+          <h2 class="sec-h">Akaun Bayarcash (halaman bayaran)</h2>
+          <p class="sec-d">Nama ini dipaparkan pada halaman bayaran Bayarcash untuk yuran RM10 dan bayaran pemenang. Wang masuk ke akaun Bayarcash kita; dalam sistem sebenar, nama ini datang daripada portal Bayarcash dan perlu sepadan.</p>
+          <div class="grid sm:grid-cols-2 gap-4 mt-5">
+            <div data-field class="sm:col-span-2"><label class="label" for="s-mn">Nama merchant</label><input id="s-mn" data-m="name" class="input" maxlength="80" autocomplete="organization"></div>
+            <div data-field><label class="label" for="s-mr">No. pendaftaran</label><input id="s-mr" data-m="registration" class="input" maxlength="40" placeholder="cth. PPM-003-03-12345678"><p class="hint">Pilihan. No. ROS atau SSM.</p></div>
+            <div data-field><label class="label" for="s-me">E-mel</label><input id="s-me" data-m="email" type="email" inputmode="email" class="input" maxlength="120" placeholder="cth. bendahari@paskotabharu.my"></div>
+            <div data-field><label class="label" for="s-mp">Telefon</label><input id="s-mp" data-m="phone" type="tel" inputmode="tel" class="input tabular-nums" maxlength="24" placeholder="cth. +60 9-748 1234"></div>
+          </div>
+          <div class="mt-5 tile p-4 sm:p-5">
+            <div class="text-[14px] text-ink-2 mb-3">Pratonton di halaman Bayarcash</div>
+            <div class="bc-pv" id="bc-pv" aria-live="polite"></div>
+            <p class="hint" id="bc-pv-note"></p>
+          </div>
+        </section>
+
         <!-- Tiers -->
         <section class="sec">
           <div class="flex items-start gap-3">
@@ -178,6 +206,39 @@
             <tbody id="tiers"></tbody>
           </table></div>
           <p id="tier-err" class="field-error hidden"></p>
+        </section>
+
+        <!-- Facebook Pixel -->
+        <section class="sec" id="sec-pixel">
+          <h2 class="sec-h">Facebook Pixel (iklan)</h2>
+          <p class="sec-d">Ukur hasil iklan Facebook dan Instagram. Pixel dimuatkan pada halaman pembida sahaja, bukan halaman admin.</p>
+          <div class="mt-5 sm:max-w-sm" data-field>
+            <label class="label" for="s-px">Pixel ID</label>
+            <input id="s-px" data-px="id" class="input tabular-nums" inputmode="numeric" maxlength="30" autocomplete="off" spellcheck="false" placeholder="cth. 123456789012345">
+            <p class="hint">10 hingga 20 digit, daripada Meta Events Manager. Kosongkan untuk mematikan Pixel.</p>
+          </div>
+          <div class="mt-3"><span id="px-status" class="status" role="status"></span><p id="px-pending" class="hint hidden">Perubahan Pixel ID berkuat kuasa selepas anda simpan.</p></div>
+          <div class="mt-5 pt-5 border-t border-line">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" data-px="sendPurchase" class="mt-1 h-5 w-5 shrink-0 accent-[var(--ink)]">
+              <span><span class="block text-[16px] text-ink">Hantar event Purchase</span><span class="block text-[14px] text-muted mt-0.5">Matikan semasa demo, kerana bayaran demo bukan bayaran sebenar. Hidupkan bila bayaran Bayarcash sebenar disambung.</span></span>
+            </label>
+          </div>
+          <div class="mt-6">
+            <div class="text-[16px] text-ink">Event yang dihantar</div>
+            <div class="mt-2 border-t border-line"><table class="table t-open text-[14px]">
+              <thead><tr><th>Event</th><th>Bila dihantar</th></tr></thead>
+              <tbody id="px-events"></tbody>
+            </table></div>
+          </div>
+          <div class="mt-5 tile p-4 sm:p-5">
+            <div class="text-[16px] text-ink">Cara uji</div>
+            <ol class="mt-2 text-[14px] text-ink-2 list-decimal pl-5 space-y-1">
+              <li>Pasang sambungan Chrome <span class="text-ink">Meta Pixel Helper</span>, atau buka <span class="text-ink">Events Manager &gt; Test events</span>.</li>
+              <li>Simpan Pixel ID, kemudian buka <a id="px-shop" class="btn-link inline-flex items-center min-h-[44px]" target="_blank" rel="noopener">halaman kedai</a>.</li>
+              <li>Event PageView patut muncul dalam beberapa saat. Konsol pelayar juga mencatat setiap event sebagai [pixel].</li>
+            </ol>
+          </div>
         </section>
       </form>
 
@@ -238,6 +299,12 @@
         else if (el.type === 'radio') el.checked = el.value === ff.default;
         else el.value = ff[el.dataset.ff] || '';
       });
+      draft.pixel = pixelDefaults(draft.pixel);
+      draft.merchant = merchantDefaults(draft.merchant);
+      f.querySelectorAll('[data-px]').forEach(el => {
+        if (el.type === 'checkbox') el.checked = !!draft.pixel[el.dataset.px]; else el.value = draft.pixel[el.dataset.px] || '';
+      });
+      f.querySelectorAll('[data-m]').forEach(el => { el.value = draft.merchant[el.dataset.m] || ''; });
       clearErrors();
       renderTiers();
       setDirty(false);
@@ -248,6 +315,25 @@
     function fulfilmentDefaults(ff) {
       return Object.assign({ pickup: false, pickupLabel: 'Ambil sendiri', pickupNote: '', post: true, default: 'post' }, JSON.parse(JSON.stringify(ff || {})));
     }
+
+    function pixelDefaults(px) { return Object.assign({ id: '', sendPurchase: false }, JSON.parse(JSON.stringify(px || {}))); }
+    /** Seed merchant name (PAS Kawasan Kota Bharu for the demo shop), else the shop name. */
+    function merchantDefaults(m) {
+      const seed = (window.EB_DATA.tenants.find(x => x.slug === slug) || {}).merchant;
+      return Object.assign({ name: (seed && seed.name) || draft.name || '', registration: '', email: '', phone: '' }, JSON.parse(JSON.stringify(m || {})));
+    }
+    const PIXEL_RE = /^\d{10,20}$/;
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneOk = v => /^\+?[\d\s()-]+$/.test(v) && (v.match(/\d/g) || []).length >= 9 && (v.match(/\d/g) || []).length <= 15;
+    const PX_EVENTS = [
+      ['PageView', 'Setiap halaman pembida'],
+      ['ViewContent', 'Buka halaman lot'],
+      ['CompleteRegistration', 'Daftar akaun'],
+      ['InitiateCheckout', 'Mula bayar yuran / bayar item'],
+      ['FeePaid', 'Yuran diterima', true],
+      ['PlaceBid', 'Bidaan berjaya', true],
+      ['Purchase', 'Bayaran berjaya', false, true],
+    ];
 
     function setDirty(v) {
       dirty = v;
@@ -269,6 +355,10 @@
         else if (el.type === 'radio') { if (el.checked) ff.default = el.value; }
         else ff[el.dataset.ff] = el.value;
       });
+      draft.pixel = pixelDefaults(draft.pixel);
+      f.querySelectorAll('[data-px]').forEach(el => { draft.pixel[el.dataset.px] = el.type === 'checkbox' ? el.checked : el.value; });
+      draft.merchant = merchantDefaults(draft.merchant);
+      f.querySelectorAll('[data-m]').forEach(el => { draft.merchant[el.dataset.m] = el.value; });
       document.querySelectorAll('#tiers tr').forEach((tr, i) => {
         const t = draft.tiers[i]; if (!t) return;
         t.name = tr.querySelector('[data-t="name"]').value;
@@ -330,7 +420,42 @@
       $('#presets').innerHTML = PRESETS.map((p, i) => `<button type="button" data-preset="${i}" class="btn btn-outline btn-sm !border !border-[var(--line-strong)] !gap-2">
         <span class="flex overflow-hidden rounded-[3px]" aria-hidden="true"><span class="h-3.5 w-3.5" style="background:${p.brand}"></span><span class="h-3.5 w-3.5" style="background:${p.accent}"></span></span>${p.name}</button>`).join('');
 
+      renderPixel();
+      renderMerchant();
       renderPreview();
+    }
+
+    function renderPixel() {
+      const px = draft.pixel;
+      const savedId = String(((EB.tenant.bySlug(slug) || {}).pixel || {}).id || '').trim();
+      const st = $('#px-status');
+      const on = PIXEL_RE.test(savedId);
+      st.className = 'status ' + (on ? 'status-ok' : 'status-warn') + ' !whitespace-normal';
+      st.innerHTML = on ? `Pixel aktif <span class="tabular-nums text-ink-2">· ID ${esc(savedId)}</span>` : 'Pixel belum disambung';
+      $('#px-pending').classList.toggle('hidden', (px.id || '').trim() === savedId);
+      $('#px-shop').href = link('shop.html');
+      $('#px-events').innerHTML = PX_EVENTS.map(([ev, when, custom, purchase]) => {
+        const off = purchase && !px.sendPurchase;
+        return `<tr class="${off ? 'text-muted' : ''}"><td class="!py-2.5 align-top"><span class="ev-name ${off ? '!text-muted' : ''}">${ev}</span>${custom ? '<span class="block text-[13px] text-muted">custom</span>' : ''}</td>
+          <td class="!py-2.5 align-top text-ink-2">${when}${purchase ? `<span class="block text-[13px] ${px.sendPurchase ? 'text-ink-2' : 'text-muted'}">${px.sendPurchase ? 'Hidup' : 'Mati: tidak dihantar'}</span>` : ''}</td></tr>`;
+      }).join('');
+    }
+
+    /** Mirrors EB.pay.merchantFor: empty fields show demo values on the Bayarcash page. */
+    function renderMerchant() {
+      const m = draft.merchant;
+      const rows = [
+        ['Merchant', m.name.trim(), () => draft.name || 'Merchant'],
+        ['Registration', m.registration.trim(), () => 'DEMO-000000-X'],
+        ['Email', m.email.trim(), () => 'demo@' + (draft.domain || 'ebidbaju.my')],
+        ['Contact Number', m.phone.trim(), () => '+60 3-0000 0000'],
+      ];
+      let demo = false;
+      $('#bc-pv').innerHTML = '<h3>Merchant Details</h3><dl>' + rows.map(([k, v, fb]) => {
+        if (!v) demo = true;
+        return `<div><dt>${k}</dt><dd class="${v ? '' : 'is-demo'}">${esc(v || fb())}</dd></div>`;
+      }).join('') + '</dl>';
+      $('#bc-pv-note').textContent = demo ? 'Ruangan kosong dipaparkan dengan nilai contoh demo (kelabu).' : '';
     }
 
     function renderPreview() {
@@ -505,6 +630,10 @@
       if (ff.pickup && ff.pickupLabel.includes(':')) return ['Label tidak boleh mengandungi tanda titik bertindih (:).', FF('pickupLabel')];
       if (ff.pickup && !ff.pickupNote.trim()) return ['Isi arahan pengambilan supaya pemenang tahu bila dan di mana mengambil item.', FF('pickupNote')];
       if (!ff[ff.default]) return ['Pilihan lalai mesti salah satu cara yang dibuka.', f.querySelector(`[name="ff-def"][value="${ff.pickup ? 'pickup' : 'post'}"]`)];
+      const m = d.merchant, M = k => f.querySelector(`[data-m="${k}"]`);
+      if (!m.name.trim()) return ['Nama merchant tidak boleh kosong.', M('name')];
+      if (m.email.trim() && !EMAIL_RE.test(m.email.trim())) return ['Format e-mel tidak sah. Contoh: bendahari@paskotabharu.my', M('email')];
+      if (m.phone.trim() && !phoneOk(m.phone.trim())) return ['Format telefon tidak sah. Contoh: +60 9-748 1234', M('phone')];
       const rowsEl = document.querySelectorAll('#tiers tr');
       for (let i = 0; i < d.tiers.length; i++) {
         const t = d.tiers[i], tr = rowsEl[i];
@@ -513,6 +642,8 @@
         if (!(t.minPrice > 0)) return [`Harga minima tier "${t.name}" mesti lebih daripada 0.`, q('minPrice')];
         if (!(t.increment > 0)) return [`Kenaikan tier "${t.name}" mesti lebih daripada 0.`, q('increment')];
       }
+      const pxId = (d.pixel.id || '').trim();
+      if (pxId && !PIXEL_RE.test(pxId)) return ['Pixel ID mesti 10 hingga 20 digit nombor.', f.querySelector('[data-px="id"]')];
       return null;
     }
 
@@ -532,6 +663,8 @@
           post: !!d.settings.fulfilment.post, default: d.settings.fulfilment.default,
         } }),
         tiers: d.tiers.map(t => ({ id: t.id, name: t.name.trim(), minPrice: t.minPrice, increment: t.increment })),
+        pixel: { id: (d.pixel.id || '').trim(), sendPurchase: !!d.pixel.sendPurchase },
+        merchant: { name: d.merchant.name.trim(), registration: d.merchant.registration.trim(), email: d.merchant.email.trim(), phone: d.merchant.phone.trim() },
       });
       load();
       EB.ui.renderAdminHeader('settings');
