@@ -32,6 +32,11 @@
   .photo figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: calc(var(--u) * 3.2) calc(var(--u) * 4) calc(var(--u) * 3.6); background: rgba(1, 2, 5, .8); }
   .photo .org { font-size: calc(var(--u) * 1.9); color: var(--grey); margin-bottom: calc(var(--u) * .8); }
   .photo h1 { font-size: calc(var(--u) * 3.4); font-weight: 400; line-height: 1.15; }
+  /* an item without a photo: plain panel, title large */
+  .photo.noimg { background: #0c0d11; }
+  .photo.noimg figcaption { top: 0; display: flex; flex-direction: column; justify-content: center; padding: calc(var(--u) * 6) calc(var(--u) * 5); background: none; }
+  .photo.noimg .org { font-size: calc(var(--u) * 2.2); margin-bottom: calc(var(--u) * 2); }
+  .photo.noimg h1 { font-size: calc(var(--u) * 6.4); line-height: 1.1; overflow-wrap: anywhere; }
 
   .panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: calc(var(--u) * 4.4) calc(var(--u) * 6) calc(var(--u) * 3.6); }
   .top { display: flex; flex-direction: column; gap: calc(var(--u) * 1.6); }
@@ -110,12 +115,98 @@
   .fs:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
   body.idle .fs { opacity: 0; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .screen, .price-box.hit, .price-box.hit .price, .list li.new { animation-duration: .01s; } }
+
+  /* ---------- phones and other non-projector shapes ----------
+   * Guests open this page on their phones too. Portrait, narrow or very short screens get a
+   * stacked, scrolling layout sized in px/vw instead of the 16:9 projector unit. Keep this query
+   * in sync with COMPACT in the script below. 16:9 projector sizes never match it. */
+  @media (max-aspect-ratio: 1/1), (max-width: 760px), (max-height: 500px) {
+    :root { --u: clamp(7px, 2.1vw, 8.5px); }
+    html { height: auto; overflow-x: hidden; overflow-y: auto; }
+    body { height: auto; overflow: visible; }
+
+    .screen { position: relative; inset: auto; min-height: 100vh; min-height: 100svh; }
+
+    .split { grid-template-columns: 100%; grid-template-rows: auto 1fr; }
+    .photo { height: 38vh; height: 38svh; min-height: 220px; }
+    .photo img { position: absolute; inset: 0; }
+    .photo figcaption { padding: 12px 16px 14px; }
+    .photo .org { font-size: 13px; margin-bottom: 4px; }
+    .photo h1 { font-size: clamp(19px, 5.4vw, 24px); line-height: 1.15; }
+    .photo.noimg { height: auto; min-height: 26vh; min-height: 26svh; display: flex; }
+    .photo.noimg figcaption { position: static; flex: 1; justify-content: flex-end; padding: 56px 16px 22px; }
+    .photo.noimg .org { font-size: 14px; margin-bottom: 8px; }
+    .photo.noimg h1 { font-size: clamp(28px, 8.4vw, 40px); line-height: 1.1; }
+
+    .panel { padding: 18px 16px 24px; }
+    .top { gap: 10px; }
+    .event { font-size: 14px; }
+    .st { font-size: 19px; gap: 10px; }
+    .st::before { width: 11px; height: 11px; }
+    .body { flex: 1 0 auto; justify-content: center; padding: 24px 0 28px; }
+
+    .lbl { font-size: 15px; }
+    .price-box { margin: 0 -10px; padding: 8px 10px 12px; }
+    .price { font-size: min(21vw, 104px); line-height: 1; }
+    .leader { margin-top: 8px; font-size: clamp(24px, 7.4vw, 34px); line-height: 1.12; max-height: calc(2 * 1.12em); }
+    .next { margin-top: 14px; font-size: 17px; }
+    .recent { margin-top: 24px; }
+    .recent .lbl { padding-bottom: 8px; }
+    .list li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who amt" "t amt"; column-gap: 16px; row-gap: 2px; padding: 10px 0; font-size: 17px; line-height: 1.25; }
+    .list .who { grid-area: who; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+    .list .t { grid-area: t; font-size: 13px; }
+    .list .amt { grid-area: amt; align-self: center; min-width: 0; white-space: nowrap; }
+
+    .wait-h { font-size: clamp(30px, 9vw, 42px); line-height: 1.08; }
+    .wait-p { margin-top: 28px; }
+    .wait-price { font-size: min(21vw, 104px); margin-top: 4px; }
+    .wait-inc { margin-top: 10px; font-size: 16px; }
+
+    .foot { flex-direction: column; gap: 8px; padding-top: 14px; font-size: 14px; }
+    .foot p:last-child { text-align: left; }
+
+    .win { padding: 18px 16px 28px; }
+    .win-main { flex: 1 0 auto; padding: 40px 0 32px; }
+    .win-hi { font-size: clamp(28px, 8.5vw, 40px); }
+    .win-name { margin-top: 14px; font-size: clamp(34px, 11vw, 56px); line-height: 1.06; max-height: calc(2 * 1.06em); }
+    .win-amt { margin-top: 16px; font-size: min(18vw, 92px); }
+    .win-lot { margin-top: 24px; font-size: 18px; line-height: 1.3; }
+    .win-note { margin-top: 6px; font-size: 15px; }
+    .win-pay { width: 100%; padding-top: 16px; }
+    .win-pay dl { grid-template-columns: 100%; gap: 14px; }
+    .win-pay dt { font-size: 14px; }
+    .win-pay dd { margin-top: 2px; font-size: 21px; }
+    .win-pay .note { margin-top: 14px; font-size: 15px; }
+    .win-paid { width: 100%; padding-top: 16px; font-size: 18px; }
+
+    .conn-x { left: 12px; bottom: 12px; padding: 6px 10px; font-size: 14px; gap: 8px; }
+    .conn-x::before { width: 8px; height: 8px; }
+    .fs { top: 12px; right: 12px; min-height: 44px; padding: 0 16px; font-size: 15px; }
+    body.can-fs .win .top { padding-right: 130px; }   /* keep the event line clear of the button */
+  }
+
+  /* Phone held sideways (short and wide): photo pinned on the left, auction scrolls on the right. */
+  @media (min-aspect-ratio: 4/3) and (max-height: 500px) {
+    .split { grid-template-columns: 40% 60%; grid-template-rows: auto; align-items: start; }
+    .photo, .photo.noimg { position: sticky; top: 0; height: 100vh; height: 100svh; min-height: 0; }
+    .photo.noimg figcaption { justify-content: center; padding: 24px 20px; }
+    .photo.noimg h1 { font-size: clamp(26px, 4.2vw, 40px); }
+    .panel { min-height: 100vh; min-height: 100svh; padding: 16px 20px 20px; }
+    .body { padding: 18px 0 22px; }
+    .price, .wait-price { font-size: min(11vw, 26vh, 96px); }
+    .wait-h { font-size: clamp(26px, 4.4vw, 38px); }
+    .win-main { padding: 24px 0; }
+    .win-name { font-size: clamp(30px, 6vw, 52px); }
+    .win-amt { font-size: min(10vw, 22vh, 88px); }
+    .win-pay { width: min(100%, 720px); }
+    .win-pay dl { grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 20px; }
+  }
 </style>
 </head>
 <body>
 
 <section class="screen split" id="split" aria-live="polite">
-  <figure class="photo">
+  <figure class="photo" id="photoBox">
     <img id="photo" src="assets/img/nikaziz-vest-hanger.jpg" alt="">
     <figcaption><p class="org" id="org"></p><h1 id="lotTitle"></h1></figcaption>
   </figure>
@@ -184,17 +275,38 @@
   /* "RM30,000" -> small grey RM + large digits */
   const big = n => '<span class="cur">RM</span>' + esc(Live.money(n).slice(2));
 
-  // Static lot text
-  const img = $('photo');
+  // Static event text
+  const img = $('photo'), photoBox = $('photoBox');
   const firstImg = (L.images || [])[0];
-  if (firstImg) { img.src = firstImg.src; img.alt = firstImg.alt || ''; } else if (L.hero) img.src = L.hero;
+  const featuredSrc = firstImg ? firstImg.src : (L.hero || img.getAttribute('src'));
+  const featuredAlt = firstImg ? (firstImg.alt || '') : '';
   $('org').textContent = L.org || '';
-  $('lotTitle').textContent = L.title || '';
   $('event').textContent = L.event || '';
   $('winEvent').textContent = L.event || '';
   $('benef').textContent = L.beneficiary || '';
   $('slogan').textContent = L.slogan || '';
-  $('winLot').textContent = L.shortTitle || L.title || '';
+
+  /* The item on sale now. The featured item (lot.featured) uses the photos and title in lot.js;
+   * any other item uses its own title and uploaded photo, or a plain panel with the title when
+   * it has no photo. */
+  function setPhoto(src, alt) {
+    photoBox.classList.toggle('noimg', !src);
+    img.hidden = !src;
+    if (src && img.getAttribute('src') !== src) img.src = src;
+    img.alt = alt;
+  }
+  img.addEventListener('error', () => { photoBox.classList.add('noimg'); img.hidden = true; });
+  let shownLot;
+  function showLot(s) {
+    const lot = s.lot || {}, featured = !s.lot || !!lot.featured;
+    const key = featured ? '*' : [lot.id, lot.title, lot.image].join('|');
+    if (key === shownLot) return;
+    shownLot = key;
+    const title = featured ? (L.title || lot.title || '') : (lot.title || '');
+    $('lotTitle').textContent = title;
+    $('winLot').textContent = featured ? (L.shortTitle || title) : title;
+    setPhoto(featured ? featuredSrc : (lot.image || ''), featured ? featuredAlt : title);
+  }
 
   /* Shrink an element's font until it fits its box (width, and max-height for 2-line names). */
   function fit(el, lines) {
@@ -211,13 +323,17 @@
     ['price', 'draftPrice', 'winAmt'].forEach(id => fit($(id)));      // one line: width only
     ['leader', 'winName'].forEach(id => fit($(id), 2));                  // up to two lines
     // Never spill into the footer: drop the oldest rows of the recent list if space runs out.
+    // Phones scroll instead, so they always keep all five rows.
     const body = $('liveBody'), list = $('list');
     [...list.children].forEach(li => { li.hidden = false; });
+    if (COMPACT.matches) return;
     let rows = [...list.children];
     while (!body.hidden && rows.length > 2 && body.scrollHeight > body.clientHeight + 1) rows.pop().hidden = true;
   }
+  /* Same query as the phone CSS block above. */
+  const COMPACT = window.matchMedia('(max-aspect-ratio: 1/1), (max-width: 760px), (max-height: 500px)');
 
-  let prevTopId, seen = new Set();
+  let prevTopId, prevActive, seen = new Set();
 
   function show(id) {
     const s = $('split'), w = $('win');
@@ -229,6 +345,10 @@
     const bids = s.bids || [];
     const top = bids.length ? bids[bids.length - 1] : null;
     const winner = s.winner || (s.status === 'closed' ? top : null);
+    // Switching to another item is not a new bid: no flash for its top bid.
+    const lotSwitched = prevActive !== undefined && s.activeId !== prevActive;
+    prevActive = s.activeId;
+    showLot(s);
 
     if (s.status === 'closed' && winner) {
       show('win');
@@ -291,7 +411,7 @@
 
       // A new highest bid: make it obvious from the back of the hall.
       // (After an undo the new top is a bid we have already seen, so no flash.)
-      if (changed && top && prevTopId !== undefined && top.id !== prevTopId && !seen.has(top.id)) {
+      if (changed && !lotSwitched && top && prevTopId !== undefined && top.id !== prevTopId && !seen.has(top.id)) {
         const box = $('priceBox');
         box.classList.remove('hit'); void box.offsetWidth; box.classList.add('hit');
         const li = $('list').firstElementChild; if (li) li.classList.add('new');
@@ -310,10 +430,14 @@
   );
 
   let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(fitAll, 120); });
+  if (COMPACT.addEventListener) COMPACT.addEventListener('change', () => requestAnimationFrame(fitAll));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
 
   // Full screen button + idle cursor
   const fs = $('fs');
+  // iPhone Safari (and some in-app browsers) cannot put a page in full screen: hide the button there.
+  fs.hidden = !(document.fullscreenEnabled && document.documentElement.requestFullscreen);
+  document.body.classList.toggle('can-fs', !fs.hidden);
   const toggleFs = () => {
     if (document.fullscreenElement) document.exitFullscreen && document.exitFullscreen();
     else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});

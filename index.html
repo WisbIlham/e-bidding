@@ -55,6 +55,32 @@
   .foot-note p + p { margin-top: 4px; }
   .rule { font-size: 14px; color: var(--ink-2); }
 
+  /* which item is on now (shown when there is more than one item) */
+  .now { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line-strong); }
+  .now-thumb { flex: none; width: 56px; height: 56px; border-radius: 6px; overflow: hidden; background: #fff; }
+  .now-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .now-txt { min-width: 0; }
+  .now .k { font-size: 13px; color: var(--muted); }
+  .now .t { font: 400 20px/1.2 var(--display); overflow-wrap: anywhere; }
+
+  /* all items tonight */
+  .items h2 { font-size: clamp(28px, 7vw, 44px); }
+  .items .sub { margin-top: 8px; color: var(--ink-2); }
+  .lots { list-style: none; margin: 20px 0 0; padding: 0; border-top: 1px solid var(--ink); max-width: 760px; }
+  .lots li { display: flex; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .lthumb { flex: none; display: block; width: 72px; height: 96px; padding: 0; border: 0; border-radius: 6px; overflow: hidden; background: var(--tile); }
+  button.lthumb { cursor: zoom-in; }
+  .lthumb img { width: 100%; height: 100%; object-fit: cover; }
+  .lbody { flex: 1; min-width: 0; }
+  .lmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 24px; }
+  .lmeta .status { font-size: 13px; }
+  .mark { display: inline-block; padding: 2px 8px; border-radius: 4px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 500; line-height: 1.5; }
+  .ltitle { margin-top: 4px; font: 400 20px/1.2 var(--display); overflow-wrap: anywhere; }
+  .ldesc { margin-top: 4px; font-size: 14px; line-height: 1.45; color: var(--ink-2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+  .lprice { margin-top: 6px; font-size: 15px; overflow-wrap: anywhere; }
+  .lprice b { font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lprice .m { color: var(--muted); }
+
   /* bid history */
   .history { padding-top: 32px; }
   .history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
@@ -126,6 +152,7 @@
     html { scroll-behavior: auto; }
     .flash, .status.open::before { animation: none; }
   }
+  .screen-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; font-weight: 500; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -154,6 +181,13 @@
   <div class="wrap live-grid">
     <section class="live" id="live" aria-label="Status bidaan">
       <div class="panel tile" id="panel">
+        <div class="now" id="now" hidden>
+          <span class="now-thumb" id="nowThumb" aria-hidden="true"></span>
+          <div class="now-txt">
+            <p class="k" id="nowK">Item sedang dibida</p>
+            <p class="t" id="nowTitle"></p>
+          </div>
+        </div>
         <div class="panel-head">
           <span class="status" id="status">Memuatkan…</span>
           <span class="count num" id="count"></span>
@@ -168,6 +202,7 @@
         <div class="foot-note">
           <p class="rule">Bidaan dibuat secara langsung dalam dewan dan direkod oleh urus setia.</p>
           <p class="conn" id="conn">Menyambung…</p>
+          <a class="screen-link" href="skrin.html">Buka paparan skrin besar <span aria-hidden="true">→</span></a>
         </div>
       </div>
     </section>
@@ -182,6 +217,12 @@
   </div>
 
   <div class="wrap">
+    <section class="sec items" id="item" aria-labelledby="iTitle" hidden>
+      <h2 id="iTitle">Item lelongan</h2>
+      <p class="sub">Item dibida satu demi satu. Senarai ini dikemas kini secara langsung.</p>
+      <ul class="lots" id="lots"></ul>
+    </section>
+
     <section class="sec story" id="kisah" aria-labelledby="sTitle">
       <div class="story-grid">
         <div>
@@ -210,6 +251,7 @@
 <footer>
   <div class="wrap">
     <p>© 2026 PAS Kawasan Kota Bharu</p>
+    <p><a href="skrin.html">Paparan skrin besar</a></p>
     <p id="slogan"></p>
   </div>
 </footer>
@@ -274,20 +316,23 @@
   if (!imgs.length) $('gambar').hidden = true;
 
   /* ---------- lightbox ---------- */
-  var lb = $('lb'), cur = 0;
+  var lb = $('lb'), cur = 0, set = imgs;
   function show(i) {
-    cur = (i + imgs.length) % imgs.length;
-    $('lbImg').src = imgs[cur].src; $('lbImg').alt = imgs[cur].alt;
-    $('lbCap').textContent = imgs[cur].alt;
-    $('lbN').textContent = (cur + 1) + ' / ' + imgs.length;
-    var single = imgs.length < 2;
+    cur = (i + set.length) % set.length;
+    $('lbImg').src = set[cur].src; $('lbImg').alt = set[cur].alt;
+    $('lbCap').textContent = set[cur].alt;
+    var single = set.length < 2;
+    $('lbN').textContent = single ? '' : (cur + 1) + ' / ' + set.length;
     $('lbPrev').hidden = single; $('lbNext').hidden = single;
+  }
+  function openLb(list, i) {
+    if (!list.length) return;
+    if (typeof lb.showModal !== 'function') { window.open(list[i].src, '_blank'); return; }
+    set = list; show(i); if (!lb.open) lb.showModal();
   }
   $('strip').addEventListener('click', function (e) {
     var b = e.target.closest('.shot'); if (!b) return;
-    var i = +b.dataset.i;
-    if (typeof lb.showModal !== 'function') { window.open(imgs[i].src, '_blank'); return; }
-    show(i); lb.showModal();
+    openLb(imgs, +b.dataset.i);
   });
   $('lbClose').addEventListener('click', function () { lb.close(); });
   $('lbPrev').addEventListener('click', function () { show(cur - 1); });
@@ -300,16 +345,89 @@
 
   /* ---------- live state ---------- */
   var prev = null, newsTimer = null, peekWanted = false, loaded = false;
+  var FEATURED_THUMB = 'assets/img/nikaziz-vest-hanger.jpg';
 
   function flash(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
-  function say(text) {
+  function say(text, quiet) {
     var n = $('news'); clearTimeout(newsTimer);
-    n.textContent = text; if (text) flash(n);
+    n.classList.remove('flash');
+    n.textContent = text; if (text && !quiet) flash(n);
     newsTimer = setTimeout(function () { n.textContent = ''; }, 15000);
   }
   function setText(id, html) { var el = $(id); el.innerHTML = html || ''; el.hidden = !html; }
 
+  /* item helpers: the featured item (Tuan Guru's vest) takes its title and photo from lot.js */
+  function titleOf(it) { return it && it.featured ? (L.shortTitle || L.title || it.title || '') : ((it && it.title) || ''); }
+  function safeUrl(u) { u = String(u || ''); return /^(api\.php\?|assets\/|https:\/\/)/.test(u) ? u : ''; }
+  function thumbOf(it) { return it && it.featured ? FEATURED_THUMB : safeUrl(it && it.image); }
+  function setImg(box, src, alt) {
+    var img = box.querySelector('img');
+    if (!src) { if (img) box.removeChild(img); return; }
+    if (!img) { img = document.createElement('img'); img.decoding = 'async'; box.appendChild(img); }
+    if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    img.alt = alt || '';
+  }
+
+  /* "which item is on now" line at the top of the live panel */
+  function renderNow(s) {
+    var lots = s.lots || [], it = s.lot || { featured: true };
+    var showIt = lots.length > 1 || !it.featured;
+    $('now').hidden = !showIt;
+    if (!showIt) return;
+    $('nowTitle').textContent = titleOf(it);
+    $('nowK').textContent = s.status === 'open' ? 'Item sedang dibida' : s.status === 'closed' ? 'Item ini sudah ditutup' : 'Item seterusnya';
+    var src = thumbOf(it);
+    $('nowThumb').hidden = !src;
+    setImg($('nowThumb'), src, '');
+  }
+
+  /* "Item lelongan" list, only when there is more than one item */
+  var lotsKey = '', lotsById = {};
+  function renderLots(s) {
+    var lots = s.lots || [];
+    $('item').hidden = lots.length < 2;
+    if (lots.length < 2) { lotsKey = ''; return; }
+    var key = JSON.stringify([s.activeId, lots]);
+    if (key === lotsKey) return;
+    lotsKey = key; lotsById = {};
+    $('lots').innerHTML = lots.map(function (it) {
+      lotsById[it.id] = it;
+      var t = titleOf(it), desc = it.featured ? (L.desc || it.desc) : it.desc, src = thumbOf(it);
+      var active = it.id === s.activeId, st = it.status;
+      var chip = '<span class="status' + (st === 'open' ? ' open' : st === 'closed' ? ' closed' : '') + '">' +
+        (st === 'open' ? 'Bidaan langsung' : st === 'closed' ? 'Ditutup' : 'Belum dibuka') + '</span>';
+      var mark = active && st !== 'closed' ? '<span class="mark">Sedang dibida</span>' : '';
+      var price;
+      if (st === 'closed') {
+        price = it.winner
+          ? 'Dimenangi oleh <strong>' + esc(it.winner.name) + '</strong> · <b>' + esc(money(it.winner.amount)) + '</b>'
+          : '<span class="m">Ditutup tanpa bidaan</span>';
+      } else if (it.top) {
+        price = 'Tertinggi <b>' + esc(money(it.top.amount)) + '</b> <span class="m">oleh ' + esc(it.top.name) + '</span>';
+      } else {
+        price = 'Harga mula <b>' + esc(money(it.startPrice)) + '</b>';
+      }
+      var thumb = src
+        ? '<button class="lthumb" type="button" data-lot="' + esc(it.id) + '" aria-label="Buka gambar penuh: ' + esc(t) + '">' +
+          '<img src="' + esc(src) + '" alt="" loading="lazy" decoding="async"></button>'
+        : '<span class="lthumb" aria-hidden="true"></span>';
+      return '<li' + (active ? ' aria-current="true"' : '') + '>' + thumb +
+        '<div class="lbody"><div class="lmeta">' + chip + mark + '</div>' +
+        '<h3 class="ltitle">' + esc(t) + '</h3>' +
+        (desc ? '<p class="ldesc">' + esc(desc) + '</p>' : '') +
+        '<p class="lprice">' + price + '</p></div></li>';
+    }).join('');
+  }
+  $('lots').addEventListener('click', function (e) {
+    var b = e.target.closest('.lthumb[data-lot]'); if (!b) return;
+    var it = lotsById[b.dataset.lot]; if (!it) return;
+    if (it.featured) openLb(imgs, 0);
+    else if (thumbOf(it)) openLb([{ src: thumbOf(it), alt: titleOf(it) }], 0);
+  });
+
   function render(s, changed) {
+    renderNow(s);
+    renderLots(s);
     var bids = s.bids || [], n = bids.length, top = n ? bids[n - 1] : null;
     var status = s.status, startP = money(s.startPrice);
 
@@ -364,8 +482,12 @@
     $('peek').setAttribute('aria-label', chip.textContent + ', ' + label + ' ' + priceText + '. Lihat status bidaan.');
 
     /* polite updates on change */
+    var activeId = s.activeId || '';
     if (changed && prev) {
-      if (n > prev.n && top) {
+      if (activeId !== prev.activeId) {
+        /* a different item is now on: no "new bid" flash, just a polite note */
+        say('Item seterusnya: ' + titleOf(s.lot || {}) + '.' + (status === 'open' ? ' Bidaan telah dibuka.' : ''), true);
+      } else if (n > prev.n && top) {
         flash(price); if ($('topBid')) flash($('topBid'));
         say('Bidaan baharu diterima: ' + money(top.amount) + '.');
       } else if (n < prev.n && status === 'open' && prev.status === 'open') {
@@ -376,7 +498,7 @@
         else say('');
       }
     }
-    prev = { n: n, status: status, paid: !!s.paid };
+    prev = { n: n, status: status, paid: !!s.paid, activeId: activeId };
     loaded = true; updatePeek();
   }
 

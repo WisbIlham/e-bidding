@@ -35,19 +35,24 @@
   .gate .btn { width: 100%; margin-top: 12px; }
 
   /* layout */
-  .console { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "sum" "main" "list" "tools"; column-gap: 48px; }
-  .a-sum { grid-area: sum; } .a-main { grid-area: main; } .a-list { grid-area: list; } .a-tools { grid-area: tools; }
+  /* While the shown item is open, the record form comes straight after the summary. */
+  .console { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "sum" "items" "main" "list" "tools"; column-gap: 48px; }
+  .console.is-live { grid-template-areas: "sum" "main" "items" "list" "tools"; }
+  .a-sum { grid-area: sum; } .a-items { grid-area: items; } .a-main { grid-area: main; } .a-list { grid-area: list; } .a-tools { grid-area: tools; }
   @media (min-width: 900px) {
-    .console { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto auto 1fr;
-      grid-template-areas: "sum sum" "main list" "tools list" ". list"; }
+    .console { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr;
+      grid-template-areas: "sum sum" "items list" "main list" "tools list" ". list"; }
+    .console.is-live { grid-template-areas: "sum sum" "main list" "items list" "tools list" ". list"; }
     .a-list { border-left: 1px solid var(--line); padding-left: 32px; margin-top: 0; }
   }
 
   /* summary */
   .sum { padding: 18px 16px; margin-bottom: 4px; }
   .sum-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .sum-lot { font-size: 14px; color: var(--muted); }
-  @media (max-width: 519px) { .sum-lot { display: none; } }
+  .sum-on { font-size: 14px; color: var(--muted); }
+  .sum-item { display: flex; align-items: center; gap: 12px; margin-top: 12px; min-width: 0; }
+  .sum-item .thumb { width: 48px; height: 48px; }
+  .sum-title { font-size: 18px; font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; min-width: 0; }
   .sum-body { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 32px; margin-top: 14px; }
   .sum-label { font-size: 14px; color: var(--ink-2); }
   .sum-amt { font-family: var(--display); font-size: clamp(40px, 11vw, 64px); line-height: 1; font-variant-numeric: tabular-nums; margin-top: 4px; }
@@ -111,10 +116,46 @@
   summary::after { content: '+'; font-size: 22px; color: var(--muted); }
   details[open] summary::after { content: '−'; }
   .det-body { padding: 4px 0 24px; }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
   input.in:disabled { background: var(--tile); color: var(--muted); }
   textarea.in { min-height: 88px; resize: vertical; }
   .danger summary { color: var(--live); }
+
+  /* item list */
+  .thumb { flex-shrink: 0; width: 64px; height: 64px; border-radius: 6px; object-fit: cover; background: #dcdde1; display: block; }
+  .items { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .item { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 0 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .item.is-active { background: var(--tile); border-radius: 8px; padding: 14px 12px; margin: 6px 0; border-bottom-color: transparent; }
+  .it-title { display: block; font-weight: 500; font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; }
+  .it-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; margin-top: 4px; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .it-meta .status { font-size: 14px; }
+  .it-paid { color: var(--ok); font-weight: 500; }
+  .it-on { display: inline-block; margin-top: 8px; padding: 3px 8px; border-radius: 4px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 500; }
+  .it-feat { font-size: 13px; color: var(--muted); }
+  .it-act { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .it-act .btn { flex: 1 1 140px; }
+  .it-err { grid-column: 1 / -1; }
+  @media (min-width: 520px) {
+    .item { grid-template-columns: 72px minmax(0, 1fr) auto; }
+    .item .thumb { width: 72px; height: 72px; }
+    .it-act { grid-column: 3; margin-top: 0; align-self: center; flex-direction: column; }
+    .it-act .btn { flex: 0 0 auto; }
+  }
+  .items-note { font-size: 15px; color: var(--ink-2); margin-bottom: 12px; overflow-wrap: anywhere; }
+  .sub { margin-top: 4px; }
+
+  /* photo pickers */
+  .vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  .file-btn { position: relative; }
+  .file-btn:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .pick .thumb { width: 72px; height: 72px; }
+  .pick-name { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; min-width: 0; flex: 1 1 120px; }
+  .pick .row { flex: 1 1 200px; }
+  .link-btn { min-height: 48px; padding: 0 4px; border: 0; background: none; font: 500 15px var(--font); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .busy-line { font-size: 15px; color: var(--ink-2); margin-top: 10px; }
+  .busy-line:empty { display: none; }
+  .sep { border: 0; border-top: 1px solid var(--line); margin: 24px 0 20px; }
 
   .toast { position: fixed; left: 50%; top: calc(8px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ink); color: #fff;
     padding: 12px 20px; border-radius: 8px; font-size: 16px; max-width: calc(100% - 32px); z-index: 10; }
@@ -148,8 +189,9 @@
     <section class="a-sum tile sum" aria-label="Ringkasan">
       <div class="sum-head">
         <span class="status" id="s-status">Belum dibuka</span>
-        <span class="sum-lot" id="s-lot"></span>
+        <span class="sum-on">Dipaparkan di skrin</span>
       </div>
+      <div class="sum-item"><span id="s-thumb"></span><div class="sum-title" id="s-lot"></div></div>
       <div class="sum-body">
         <div>
           <div class="sum-label" id="s-label">Bidaan tertinggi</div>
@@ -171,6 +213,98 @@
         <span class="conn" id="conn">Menyambung…</span>
       </div>
     </section>
+
+    <!-- items -->
+    <div class="a-items">
+      <section class="blk" id="items-sec">
+        <div class="list-head"><h2>Senarai item</h2><span class="muted num" id="i-count"></span></div>
+        <p class="items-note" id="i-note" hidden></p>
+        <ul class="items" id="items"></ul>
+
+        <details id="add" class="sub">
+          <summary>Tambah item</summary>
+          <form class="det-body" id="add-form" novalidate autocomplete="off">
+            <div class="field">
+              <label class="f" for="a-title">Nama item</label>
+              <input class="in" id="a-title" maxlength="120" autocomplete="off" autocapitalize="sentences">
+            </div>
+            <div class="field">
+              <label class="f" for="a-desc">Penerangan <span class="muted">(pilihan)</span></label>
+              <textarea class="in" id="a-desc" maxlength="1000" rows="3"></textarea>
+            </div>
+            <div class="two">
+              <div class="field">
+                <label class="f" for="a-start">Harga mula (RM)</label>
+                <input class="in num" id="a-start" inputmode="numeric" autocomplete="off">
+              </div>
+              <div class="field">
+                <label class="f" for="a-inc">Kenaikan minimum (0 = bebas)</label>
+                <input class="in num" id="a-inc" inputmode="numeric" autocomplete="off" value="0">
+              </div>
+            </div>
+            <div class="field">
+              <span class="f">Gambar <span class="muted">(pilihan)</span></span>
+              <div class="pick">
+                <img class="thumb" id="a-prev" alt="" hidden>
+                <label class="btn btn-outline btn-sm file-btn"><span id="a-pick-t">Pilih gambar</span><input class="vh" id="a-file" type="file" accept="image/*"></label>
+                <button class="link-btn" id="a-clear" type="button" hidden>Buang pilihan</button>
+              </div>
+              <p class="note">JPG, PNG atau WEBP. Gambar besar dikecilkan dahulu supaya cepat dihantar.</p>
+            </div>
+            <button class="btn" id="a-save" type="submit" style="width:100%">Tambah item</button>
+            <p class="busy-line" id="a-busy" aria-live="polite"></p>
+            <p class="err" id="a-err" role="alert"></p>
+          </form>
+        </details>
+
+        <details id="edit" class="sub">
+          <summary>Ubah item di skrin</summary>
+          <div class="det-body">
+            <p class="note" id="e-feat" hidden style="margin:0 0 16px">Item utama: tajuk, gambar dan cerita di halaman tetamu dan skrin projektor diambil daripada fail lot.js. Nama di sini hanya untuk admin dan CSV.</p>
+            <form id="edit-form" novalidate autocomplete="off">
+              <div class="field">
+                <label class="f" for="e-title">Nama item</label>
+                <input class="in" id="e-title" maxlength="120" autocomplete="off">
+              </div>
+              <div class="field">
+                <label class="f" for="e-desc">Penerangan <span class="muted">(pilihan)</span></label>
+                <textarea class="in" id="e-desc" maxlength="1000" rows="3"></textarea>
+              </div>
+              <button class="btn" id="e-save" type="submit">Simpan butiran</button>
+              <p class="err" id="e-err" role="alert"></p>
+            </form>
+
+            <div id="e-photo">
+              <hr class="sep">
+              <span class="f">Gambar</span>
+              <div class="pick">
+                <span id="e-thumb"></span>
+                <div class="row">
+                  <label class="btn btn-outline btn-sm file-btn"><span id="e-pick-t">Pilih gambar</span><input class="vh" id="e-file" type="file" accept="image/*"></label>
+                  <button class="btn btn-outline btn-sm" id="e-rmimg" type="button" hidden>Buang gambar</button>
+                </div>
+              </div>
+              <p class="busy-line" id="e-busy" aria-live="polite"></p>
+              <p class="err" id="e-img-err" role="alert"></p>
+            </div>
+
+            <div id="e-del-wrap">
+              <hr class="sep">
+              <button class="btn btn-outline btn-sm" id="e-del" type="button">Padam item ini</button>
+              <p class="note" id="e-del-note"></p>
+              <div class="ask" id="e-del-ask" hidden>
+                <p id="e-del-q"></p>
+                <div class="row">
+                  <button class="btn btn-danger" id="e-del-yes" type="button">Ya, padam</button>
+                  <button class="btn btn-outline" id="e-del-no" type="button">Batal</button>
+                </div>
+              </div>
+              <p class="err" id="e-del-err" role="alert"></p>
+            </div>
+          </div>
+        </details>
+      </section>
+    </div>
 
     <div class="a-main">
       <!-- record bid -->
@@ -287,11 +421,12 @@
     <div class="a-tools">
       <section class="blk">
         <button class="btn btn-outline" id="csv-btn" type="button" style="width:100%">Muat turun CSV</button>
-        <p class="note">Senarai semua bidaan dengan nombor telefon, untuk bendahari.</p>
+        <p class="note">Semua item: bidaan, nombor telefon, pemenang dan bayaran, untuk bendahari.</p>
       </section>
       <details id="set">
         <summary>Tetapan</summary>
         <form class="det-body" id="set-form" novalidate>
+          <p class="note" id="t-item" style="margin:0 0 12px"></p>
           <div class="two">
             <div class="field">
               <label class="f" for="t-start">Harga mula (RM)</label>
@@ -318,7 +453,7 @@
           <div class="field">
             <label class="f" for="t-note">Nota bayaran</label>
             <textarea class="in" id="t-note" maxlength="160" rows="3"></textarea>
-            <p class="note">Dipaparkan pada skrin projektor semasa pemenang diumumkan, hanya jika diisi.</p>
+            <p class="note">Dipaparkan pada skrin projektor semasa pemenang diumumkan, hanya jika diisi. Butiran bayaran sama untuk semua item.</p>
           </div>
           <button class="btn" id="t-save" type="submit">Simpan tetapan</button>
           <p class="err" id="set-err" role="alert"></p>
@@ -327,10 +462,10 @@
       <details class="danger">
         <summary>Zon bahaya</summary>
         <div class="det-body">
-          <p>Reset memadam semua bidaan, status dan pemenang. Salinan disimpan di server. Harga dan butiran bayaran kekal.</p>
+          <p>Reset memadam semua bidaan, status, pemenang dan pengesahan bayaran bagi <b>semua item</b>. Salinan disimpan di server. Senarai item, gambar, harga dan butiran bayaran kekal.</p>
           <label class="f" for="z-confirm" style="margin-top:14px">Taip RESET untuk sahkan</label>
           <input class="in" id="z-confirm" autocomplete="off" autocapitalize="characters" spellcheck="false">
-          <button class="btn btn-danger" id="z-btn" type="button" disabled style="margin-top:10px;width:100%">Reset bidaan</button>
+          <button class="btn btn-danger" id="z-btn" type="button" disabled style="margin-top:10px;width:100%">Reset bidaan semua item</button>
           <p class="err" id="z-err" role="alert"></p>
         </div>
       </details>
@@ -352,10 +487,15 @@
   let pin = '';
   let S = null;              // full admin state
   let busy = false;          // one admin request at a time
+  let reply = null;          // last full reply of act() (addLot gives newId)
   const ui = { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false,
-    autoPhone: '', mine: new Set(), setDirty: false, noticeTimer: null };
+    autoPhone: '', mine: new Set(), setDirty: false, setLot: null, noticeTimer: null,
+    editLot: null, editDirty: false, delAsk: false, rowErr: null, rowErrTimer: null, flashId: null };
+  // actions that work on one item; act() sends the shown item's id so a switch on another device can't redirect them
+  const ITEM_ACTS = new Set(['open', 'bid', 'undo', 'close', 'reopen', 'paid', 'unpaid', 'settings']);
+  const FEATURED_IMG = '../assets/img/nikaziz-vest-hanger.jpg';
 
-  if (window.LOT) { $('org').textContent = LOT.org || $('org').textContent; $('s-lot').textContent = LOT.shortTitle || ''; }
+  if (window.LOT) $('org').textContent = LOT.org || $('org').textContent;
 
   /* ---------- PIN storage: localStorage, else sessionStorage, else memory ---------- */
   let memPin = '';
@@ -381,6 +521,14 @@
   const lastBid = st => st && st.bids.length ? st.bids[st.bids.length - 1] : null;
   const parseAmt = v => { const d = String(v || '').split('.')[0].replace(/[^\d]/g, ''); return d ? parseInt(d, 10) : 0; };
   const show = (el, on) => { el.hidden = !on; };
+  const STATUS_TXT = { draft: 'Belum dibuka', open: 'Dibuka', closed: 'Ditutup' };
+  const lotTop = l => l && l.bids.length ? l.bids[l.bids.length - 1] : null;
+  const activeLot = () => S && (S.lots.find(l => l.id === S.activeId) || S.lots[0]);
+  const imgUrl = p => /^(https?:)?\//.test(p) ? p : '../' + p;
+  const lotImg = l => l.image ? imgUrl(l.image) : (l.featured ? FEATURED_IMG : '');
+  const thumbHtml = l => { const src = lotImg(l);
+    return src ? '<img class="thumb" src="' + esc(src) + '" alt="" loading="lazy" decoding="async">' : '<span class="thumb" aria-hidden="true"></span>'; };
+  const setErr = (err, msg) => { if (typeof err === 'function') err(msg); else if (err) err.textContent = msg; };
 
   let toastTimer = null;
   function toast(msg) {
@@ -388,30 +536,36 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
   }
 
-  async function post(body, usePin) {
+  /* body: plain object (sent as JSON) or FormData (photo upload). Resolves to the full reply. */
+  async function postRaw(body, usePin) {
+    const form = body instanceof FormData;
     let r, j = null;
     try {
       r = await fetch(Live.API, { method: 'POST', cache: 'no-store',
-        headers: { 'X-Pin': usePin || pin, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        headers: form ? { 'X-Pin': usePin || pin } : { 'X-Pin': usePin || pin, 'Content-Type': 'application/json' },
+        body: form ? body : JSON.stringify(body) });
     } catch (e) { throw new Error('Tiada sambungan ke server. Cuba lagi.'); }
     try { j = await r.json(); } catch (e) {}
     if (r.status === 401) { const e = new Error('PIN salah.'); e.auth = true; throw e; }
+    if (r.status === 413) throw new Error('Gambar terlalu besar untuk server. Cuba gambar lain.');
     if (!j || !j.ok) throw new Error((j && j.error) || 'Ralat server (' + r.status + '). Cuba lagi.');
-    return j.state;
+    return j;
   }
+  const post = async (body, usePin) => (await postRaw(body, usePin)).state;
 
-  /* Run an admin action. Applies the returned state; on error shows it in errEl and refreshes. */
-  async function act(body, errEl, btn) {
+  /* Run an admin action. Applies the returned state; on error shows it in err (element or function) and refreshes. */
+  async function act(body, err, btn) {
     if (busy) return null;
     busy = true; if (btn) btn.disabled = true;
-    if (errEl) errEl.textContent = '';
+    setErr(err, '');
+    if (!(body instanceof FormData) && S && ITEM_ACTS.has(body.action) && !body.lotId) body.lotId = S.activeId;
     try {
-      const st = await post(body);
-      apply(st);
-      return st;
+      reply = await postRaw(body);
+      apply(reply.state);
+      return reply.state;
     } catch (e) {
       if (e.auth) { logout('PIN telah ditukar. Masukkan PIN baharu.'); return null; }
-      if (errEl) errEl.textContent = e.message;
+      setErr(err, e.message);
       busy = false; refresh();
       return null;
     } finally {
@@ -442,7 +596,8 @@
   }
   function logout(msg) {
     pin = ''; S = null; storeClear();
-    Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, setDirty: false });
+    Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, setDirty: false,
+      setLot: null, editLot: null, editDirty: false, delAsk: false, rowErr: null });
     showGate(msg);
   }
 
@@ -468,10 +623,19 @@
     if (S && st.version < S.version) return;            // older than what we have
     const prev = S;
     S = st;
-    const pl = lastBid(prev), nl = lastBid(st);
+    const switched = !!prev && prev.activeId !== st.activeId;
+    const pl = switched ? null : lastBid(prev), nl = lastBid(st);
+
+    // the item on screen changed (here or on another device): drop everything that belonged to the old item
+    if (switched) {
+      Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, delAsk: false });
+      $('rec-notice').hidden = true;
+      for (const id of ['rec-err', 'ctl-err', 'win-err', 'list-err', 'e-err', 'e-img-err', 'e-del-err']) $(id).textContent = '';
+      amtEl.value = ''; $('pay-ref').value = '';
+    }
 
     // a bid recorded on another device
-    if (prev && nl && st.bids.length > prev.bids.length && !ui.mine.has(nl.id)) {
+    if (prev && !switched && nl && st.bids.length > prev.bids.length && !ui.mine.has(nl.id)) {
       const n = $('rec-notice');
       n.textContent = 'Bidaan baharu dari peranti lain: ' + money(nl.amount) + ' oleh ' + nl.name + '.';
       n.hidden = false; clearTimeout(ui.noticeTimer); ui.noticeTimer = setTimeout(() => { n.hidden = true; }, 10000);
@@ -485,9 +649,9 @@
     if (st.status !== 'open') ui.closeAsk = false;
     if (st.status !== 'closed') ui.reopenAsk = false;
     if (!st.paid) ui.unpaidAsk = false;
+    if (st.bids.length || st.status === 'open') ui.delAsk = false;
 
-
-    render((pl && pl.id) !== (nl && nl.id));
+    render(!switched && (pl && pl.id) !== (nl && nl.id));
   }
 
   /* ---------- render ---------- */
@@ -495,8 +659,13 @@
     if (!S) return;
     const st = S, top = lastBid(st), n = st.bids.length;
     const open = st.status === 'open', closed = st.status === 'closed';
+    $('console').classList.toggle('is-live', open);
 
     // summary
+    const al = activeLot();
+    $('s-lot').textContent = st.lot ? st.lot.title : '';
+    const tk = al ? lotImg(al) : '';
+    if ($('s-thumb').dataset.k !== tk) { $('s-thumb').dataset.k = tk; $('s-thumb').innerHTML = al ? thumbHtml(al) : ''; }
     const chip = $('s-status');
     chip.className = 'status' + (open ? ' open' : closed ? ' closed' : '');
     chip.textContent = open ? 'Bidaan dibuka' : closed ? 'Bidaan ditutup' : 'Belum dibuka';
@@ -567,13 +736,19 @@
     }
 
     renderList(newTop);
+    renderItems();
+    renderEdit();
     renderSettings();
   }
 
   let dlKey = '';
   function bidders() {
-    const m = new Map();     // lower-case name -> {name, phone}
-    for (const b of S.bids) {
+    const m = new Map();     // lower-case name -> {name, phone}; the same guests often bid on several items
+    const all = [];
+    for (const l of S.lots) if (l.id !== S.activeId) all.push(...l.bids);
+    all.sort((a, b) => a.at - b.at);
+    all.push(...S.bids);
+    for (const b of all) {
       const k = b.name.toLowerCase(), cur = m.get(k);
       m.set(k, { name: b.name, phone: b.phone || (cur ? cur.phone : '') });
     }
@@ -653,6 +828,9 @@
     const locked = S.bids.length > 0;
     $('t-start').disabled = locked; $('t-inc').disabled = locked;
     show($('t-lock'), locked);
+    $('t-item').innerHTML = 'Harga untuk item di skrin: <b>' + esc(S.lot ? S.lot.title : '') + '</b>';
+    // the prices belong to the shown item: always refill them when it changes
+    if (ui.setLot !== S.activeId || locked) { ui.setLot = S.activeId; $('t-start').value = S.startPrice; $('t-inc').value = S.increment; }
     const form = $('set-form');
     if (ui.setDirty || form.contains(document.activeElement)) return;
     $('t-start').value = S.startPrice; $('t-inc').value = S.increment;
@@ -691,7 +869,7 @@
     if (!name) { $('rec-err').textContent = 'Masukkan nama pembida.'; nameEl.focus(); return; }
     if (!renderHint()) { amtEl.focus(); return; }
     $('rec-err').textContent = '';
-    ui.ask = { name, phone: phoneEl.value.trim(), amount: parseAmt(amtEl.value) };
+    ui.ask = { name, phone: phoneEl.value.trim(), amount: parseAmt(amtEl.value), lotId: S.activeId };
     render();
     $('ask-yes').focus();
   });
@@ -778,7 +956,7 @@
   $('set-form').addEventListener('input', () => { ui.setDirty = true; });
   $('set-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const body = { action: 'settings', bank: $('t-bank').value, accName: $('t-accname').value, accNo: $('t-accno').value, note: $('t-note').value };
+    const body = { action: 'settings', lotId: ui.setLot || S.activeId, bank: $('t-bank').value, accName: $('t-accname').value, accNo: $('t-accno').value, note: $('t-note').value };
     if (!S.bids.length) {
       const sp = parseAmt($('t-start').value), inc = parseAmt($('t-inc').value);
       if (sp < 1) { $('set-err').textContent = 'Harga mula mesti lebih daripada 0.'; return; }
@@ -786,6 +964,189 @@
     }
     const st = await act(body, $('set-err'), $('t-save'));
     if (st) { ui.setDirty = false; document.activeElement.blur(); renderSettings(); toast('Tetapan disimpan'); }
+  });
+
+  /* ---------- items ---------- */
+  let itemsHtml = '';
+  function renderItems() {
+    const lots = S.lots, openLot = lots.find(l => l.status === 'open');
+    $('i-count').textContent = lots.length + ' item';
+    const note = $('i-note');
+    note.hidden = !(openLot && lots.length > 1);
+    if (!note.hidden) note.innerHTML = 'Bidaan <b>' + esc(openLot.title) + '</b> sedang dibuka. Tutup dahulu sebelum memaparkan atau membuka item lain.';
+    let html = '';
+    for (const l of lots) {
+      const on = l.id === S.activeId, top = lotTop(l), n = l.bids.length;
+      const cls = l.status === 'open' ? ' open' : l.status === 'closed' ? ' closed' : '';
+      let price;
+      if (l.winner) price = 'Pemenang <b>' + money(l.winner.amount) + '</b> · ' + esc(l.winner.name);
+      else if (l.status === 'closed') price = 'Tiada pemenang';
+      else if (top) price = 'Tertinggi <b>' + money(top.amount) + '</b>';
+      else price = 'Harga mula ' + money(l.startPrice);
+      html += '<li class="item' + (on ? ' is-active' : '') + (ui.flashId === l.id ? ' flash' : '') + '" data-id="' + esc(l.id) + '">' + thumbHtml(l) +
+        '<div><span class="it-title">' + esc(l.title) + '</span>' +
+        '<div class="it-meta"><span class="status' + cls + '">' + STATUS_TXT[l.status] + '</span>' +
+        '<span>' + price + '</span><span>' + n + ' bidaan</span>' +
+        (l.paid ? '<span class="it-paid">Dibayar</span>' : '') +
+        (l.featured ? '<span class="it-feat">Item utama</span>' : '') + '</div>' +
+        (on ? '<span class="it-on">Dipaparkan di skrin</span>' : '') + '</div>';
+      if (!on) {
+        html += '<div class="it-act"><button class="btn btn-outline btn-sm" type="button" data-show="' + esc(l.id) + '">Papar di skrin</button>' +
+          (l.status === 'draft' ? '<button class="btn btn-sm" type="button" data-open="' + esc(l.id) + '">Buka bidaan</button>' : '') + '</div>';
+      }
+      if (ui.rowErr && ui.rowErr.id === l.id) html += '<p class="err it-err" role="alert">' + esc(ui.rowErr.msg) + '</p>';
+      html += '</li>';
+    }
+    ui.flashId = null;
+    if (html !== itemsHtml) { itemsHtml = html; $('items').innerHTML = html; }
+  }
+  function rowError(id) {
+    return msg => {
+      clearTimeout(ui.rowErrTimer);
+      ui.rowErr = msg ? { id, msg } : null;
+      if (msg) ui.rowErrTimer = setTimeout(() => { ui.rowErr = null; if (S) render(); }, 12000);
+    };
+  }
+  $('items').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b || !S) return;
+    const id = b.dataset.show || b.dataset.open; if (!id) return;
+    const l = S.lots.find(x => x.id === id); const title = l ? l.title : '';
+    const st = await act({ action: b.dataset.open ? 'open' : 'setActive', lotId: id }, rowError(id), b);
+    if (!st) return;
+    toast((b.dataset.open ? 'Bidaan dibuka: ' : 'Di skrin: ') + title);
+    if (!window.matchMedia('(min-width: 900px)').matches) $('console').scrollIntoView({ block: 'start' });
+  });
+
+  /* ---------- photos: shrink big phone photos before upload ---------- */
+  const MAX_SIDE = 1600;
+  function loadImg(file) {
+    return new Promise((res, rej) => {
+      const u = URL.createObjectURL(file), im = new Image();
+      im.onload = () => res({ im, u });
+      im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('decode')); };
+      im.src = u;
+    });
+  }
+  async function shrink(file) {
+    const okType = /^image\/(jpeg|png|webp)$/.test(file.type);
+    let im, u;
+    try { ({ im, u } = await loadImg(file)); } catch (e) { return file; }     // cannot read it here: let the server decide
+    try {
+      const w = im.naturalWidth, h = im.naturalHeight;
+      const k = Math.min(1, MAX_SIDE / Math.max(w, h));
+      if (okType && k === 1 && file.size <= 1500000) return file;
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);          // PNG transparency -> white, not black
+      g.drawImage(im, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+      if (!blob || (okType && blob.size >= file.size)) return file;
+      return blob;
+    } catch (e) { return file; }
+    finally { URL.revokeObjectURL(u); }
+  }
+  async function sendImage(lotId, file, err, btn, busyEl) {
+    busyEl.textContent = 'Menyediakan gambar…';
+    const img = await shrink(file);
+    if (img.size > 8 * 1024 * 1024) { busyEl.textContent = ''; setErr(err, 'Gambar terlalu besar (maksimum 8MB).'); return null; }
+    const fd = new FormData();
+    fd.append('action', 'uploadImage'); fd.append('lotId', lotId);
+    fd.append('image', img, img === file ? (file.name || 'gambar.jpg') : 'gambar.jpg');
+    busyEl.textContent = 'Memuat naik gambar…';
+    try { return await act(fd, err, btn); }
+    finally { busyEl.textContent = ''; }
+  }
+
+  /* ---------- add item ---------- */
+  let addFile = null, addUrl = '';
+  function setAddFile(f) {
+    addFile = f || null;
+    if (addUrl) { URL.revokeObjectURL(addUrl); addUrl = ''; }
+    const pv = $('a-prev');
+    if (addFile) { addUrl = URL.createObjectURL(addFile); pv.src = addUrl; }
+    else pv.removeAttribute('src');
+    pv.hidden = !addFile;
+    $('a-pick-t').textContent = addFile ? 'Tukar gambar' : 'Pilih gambar';
+    $('a-clear').hidden = !addFile;
+    if (!addFile) $('a-file').value = '';
+  }
+  $('a-file').addEventListener('change', e => { setAddFile(e.target.files && e.target.files[0]); $('a-err').textContent = ''; });
+  $('a-clear').addEventListener('click', () => setAddFile(null));
+  $('add-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!S || busy) return;
+    const err = $('a-err'), btn = $('a-save');
+    const title = $('a-title').value.trim().replace(/\s+/g, ' ');
+    const sp = parseAmt($('a-start').value), inc = parseAmt($('a-inc').value);
+    if (!title) { err.textContent = 'Masukkan nama item.'; $('a-title').focus(); return; }
+    if (sp < 1) { err.textContent = 'Masukkan harga mula (lebih daripada RM0).'; $('a-start').focus(); return; }
+    const st = await act({ action: 'addLot', title, desc: $('a-desc').value.trim(), startPrice: sp, increment: inc }, err, btn);
+    if (!st) return;
+    const newId = reply && reply.newId, file = addFile;
+    $('a-title').value = ''; $('a-desc').value = ''; $('a-start').value = ''; $('a-inc').value = '0';
+    if (file && newId) {
+      btn.disabled = true;
+      const ok = await sendImage(newId, file, msg => { if (msg) err.textContent = 'Item ditambah, tetapi gambar tidak dapat dimuat naik: ' + msg + ' Papar item itu di skrin dan cuba lagi di "Ubah item di skrin".'; }, btn, $('a-busy'));
+      btn.disabled = false;
+      setAddFile(null);
+      if (!ok) { ui.flashId = newId; render(); return; }
+    }
+    setAddFile(null);
+    ui.flashId = newId; render();
+    toast('Item ditambah: ' + title);
+  });
+
+  /* ---------- edit the item on screen ---------- */
+  function renderEdit() {
+    const l = activeLot(); if (!l) return;
+    const changed = ui.editLot !== l.id;
+    if (changed) { ui.editLot = l.id; ui.editDirty = false; ui.delAsk = false; }
+    if (changed || (!ui.editDirty && !$('edit-form').contains(document.activeElement))) {
+      $('e-title').value = l.title; $('e-desc').value = l.desc || '';
+    }
+    show($('e-feat'), !!l.featured);
+    show($('e-photo'), !l.featured);
+    const tk = lotImg(l);
+    if ($('e-thumb').dataset.k !== tk) { $('e-thumb').dataset.k = tk; $('e-thumb').innerHTML = thumbHtml(l); }
+    $('e-pick-t').textContent = l.image ? 'Tukar gambar' : 'Pilih gambar';
+    show($('e-rmimg'), !!l.image);
+    const why = l.featured ? 'Item utama tidak boleh dipadam.'
+      : l.bids.length ? 'Item yang sudah ada bidaan tidak boleh dipadam.'
+      : l.status === 'open' ? 'Tutup bidaan item ini dahulu untuk memadamnya.' : '';
+    show($('e-del'), !why && !ui.delAsk);
+    $('e-del-note').textContent = why;
+    show($('e-del-note'), !!why);
+    show($('e-del-ask'), !why && ui.delAsk);
+    if (ui.delAsk) $('e-del-q').innerHTML = 'Padam <b>' + esc(l.title) + '</b>? Item ini akan dibuang daripada senarai.';
+  }
+  $('edit-form').addEventListener('input', () => { ui.editDirty = true; });
+  $('edit-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!S) return;
+    const title = $('e-title').value.trim().replace(/\s+/g, ' ');
+    if (!title) { $('e-err').textContent = 'Nama item tidak boleh kosong.'; $('e-title').focus(); return; }
+    const st = await act({ action: 'updateLot', lotId: ui.editLot, title, desc: $('e-desc').value.trim() }, $('e-err'), $('e-save'));
+    if (st) { ui.editDirty = false; document.activeElement.blur(); render(); toast('Butiran item disimpan'); }
+  });
+  $('e-file').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0]; const id = ui.editLot;
+    e.target.value = '';
+    if (!f || !id) return;
+    const st = await sendImage(id, f, $('e-img-err'), null, $('e-busy'));
+    if (st) toast('Gambar dikemas kini');
+  });
+  $('e-rmimg').addEventListener('click', async e => {
+    const st = await act({ action: 'removeImage', lotId: ui.editLot }, $('e-img-err'), e.currentTarget);
+    if (st) toast('Gambar dibuang');
+  });
+  $('e-del').addEventListener('click', () => { ui.delAsk = true; $('e-del-err').textContent = ''; render(); $('e-del-no').focus(); });
+  $('e-del-no').addEventListener('click', () => { ui.delAsk = false; render(); });
+  $('e-del-yes').addEventListener('click', async e => {
+    const id = ui.editLot, l = S.lots.find(x => x.id === id), title = l ? l.title : '';
+    const st = await act({ action: 'deleteLot', lotId: id }, $('e-del-err'), e.currentTarget);
+    ui.delAsk = false; if (S) render();
+    if (st) { $('edit').open = false; toast('Item dipadam: ' + title); }
   });
 
   /* ---------- CSV ---------- */
@@ -799,16 +1160,22 @@
       if (text && /^[=+\-@\t\r]/.test(s)) s = "'" + s;      // stop spreadsheet formulas
       return '"' + s.replace(/"/g, '""') + '"';
     };
-    const rows = [['No', 'Masa', 'Nama', 'Telefon', 'Jumlah RM'].map(x => cell(x))];
-    st.bids.forEach((b, i) => rows.push([cell(i + 1), cell(stamp(b.at)), cell(b.name, true), cell(b.phone, /^[=\-@]/.test(b.phone || '')), cell(b.amount)]));
-    if (st.winner) {
-      rows.push([]);
-      rows.push([cell('Pemenang'), cell(st.closedAt ? stamp(st.closedAt) : ''), cell(st.winner.name, true), cell(st.winner.phone, /^[=\-@]/.test(st.winner.phone || '')), cell(st.winner.amount)]);
-      rows.push(st.paid
-        ? [cell('Bayaran disahkan'), cell(stamp(st.paid.at)), cell(st.paid.ref || '', true), cell(''), cell('')]
-        : [cell('Bayaran'), cell(''), cell('Belum disahkan'), cell(''), cell('')]);
-    } else if (st.status === 'closed') {
-      rows.push([]); rows.push([cell('Pemenang'), cell(''), cell('Tiada (ditutup tanpa bidaan)'), cell(''), cell('')]);
+    const ph = p => cell(p, /^[=\-@]/.test(p || ''));
+    // one block per item, "Item" first so the treasurer can filter by item
+    const rows = [['Item', 'No', 'Masa', 'Nama', 'Telefon', 'Jumlah RM'].map(x => cell(x))];
+    for (const l of st.lots) {
+      const T = cell(l.title, true);
+      l.bids.forEach((b, i) => rows.push([T, cell(i + 1), cell(stamp(b.at)), cell(b.name, true), ph(b.phone), cell(b.amount)]));
+      if (l.winner) {
+        rows.push([T, cell('Pemenang'), cell(l.closedAt ? stamp(l.closedAt) : ''), cell(l.winner.name, true), ph(l.winner.phone), cell(l.winner.amount)]);
+        rows.push(l.paid
+          ? [T, cell('Bayaran disahkan'), cell(stamp(l.paid.at)), cell(l.paid.ref || '', true), cell(''), cell('')]
+          : [T, cell('Bayaran'), cell(''), cell('Belum disahkan'), cell(''), cell('')]);
+      } else if (l.status === 'closed') {
+        rows.push([T, cell('Pemenang'), cell(l.closedAt ? stamp(l.closedAt) : ''), cell('Tiada (ditutup tanpa bidaan)'), cell(''), cell('')]);
+      } else if (!l.bids.length) {
+        rows.push([T, cell(''), cell(''), cell(l.status === 'open' ? 'Dibuka, belum ada bidaan' : 'Belum dibuka'), cell(''), cell('')]);
+      }
     }
     return rows.map(r => r.join(',')).join('\r\n') + '\r\n';
   }
@@ -828,9 +1195,9 @@
     const st = await act({ action: 'reset', confirm: 'RESET' }, $('z-err'), e.currentTarget);
     if (st) {
       $('z-confirm').value = ''; $('z-btn').disabled = true;
-      Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false });
+      Object.assign(ui, { ask: null, closeAsk: false, reopenAsk: false, undoId: null, unpaidAsk: false, delAsk: false, rowErr: null });
       amtEl.value = ''; render();
-      toast('Data bidaan direset');
+      toast('Bidaan semua item direset');
     } else $('z-btn').disabled = $('z-confirm').value.trim() !== 'RESET';
   });
 
